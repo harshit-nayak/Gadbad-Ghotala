@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.safetensors
+indic_df/
+flac_D/
+flac_T/
+.cache/

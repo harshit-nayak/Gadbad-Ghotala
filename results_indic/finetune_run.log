@@ -1,0 +1,74 @@
+common - <dataclasses._MISSING_TYPE object at 0x000002E012DB1160>
+2026-09-11 18:20:17 | INFO | fairseq.tasks.text_to_speech | Please install tensorboardX: pip install tensorboardX
+training conformer head: 1.79 M params
+train 12730  dev 1904
+  ep 1 batch 25/198  loss 0.8521  4806 ms/batch
+  ep 1 batch 50/198  loss 0.6905  4901 ms/batch
+  ep 1 batch 75/198  loss 0.5619  4795 ms/batch
+  ep 1 batch 100/198  loss 0.4629  4861 ms/batch
+  ep 1 batch 125/198  loss 0.3943  4931 ms/batch
+  ep 1 batch 150/198  loss 0.3440  5068 ms/batch
+  ep 1 batch 175/198  loss 0.3045  5020 ms/batch
+ep  1  loss 0.2757  dev EER 1.52%  (lang:bn=2.90 lang:hi=2.00 lang:ta=0.00 codec:clean=1.26 codec:whatsapp=1.78)  1046s
+  ep 2 batch 25/198  loss 0.0673  4456 ms/batch
+  ep 2 batch 50/198  loss 0.0549  4577 ms/batch
+  ep 2 batch 75/198  loss 0.0470  4636 ms/batch
+  ep 2 batch 100/198  loss 0.0469  5213 ms/batch
+  ep 2 batch 125/198  loss 0.0439  5871 ms/batch
+  ep 2 batch 150/198  loss 0.0423  6567 ms/batch
+  ep 2 batch 175/198  loss 0.0409  7322 ms/batch
+ep  2  loss 0.0381  dev EER 0.74%  (lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.74 codec:whatsapp=0.95)  1762s
+  ep 3 batch 25/198  loss 0.0174  10807 ms/batch
+  ep 3 batch 50/198  loss 0.0288  11713 ms/batch
+  ep 3 batch 75/198  loss 0.0319  11416 ms/batch
+  ep 3 batch 100/198  loss 0.0293  11355 ms/batch
+  ep 3 batch 125/198  loss 0.0271  11285 ms/batch
+  ep 3 batch 150/198  loss 0.0258  10833 ms/batch
+  ep 3 batch 175/198  loss 0.0256  10158 ms/batch
+ep  3  loss 0.0264  dev EER 0.74%  (lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.74 codec:whatsapp=0.74)  2023s
+  ep 4 batch 25/198  loss 0.0189  6220 ms/batch
+  ep 4 batch 50/198  loss 0.0201  5740 ms/batch
+  ep 4 batch 75/198  loss 0.0187  5668 ms/batch
+  ep 4 batch 100/198  loss 0.0180  5823 ms/batch
+  ep 4 batch 125/198  loss 0.0187  6718 ms/batch
+  ep 4 batch 150/198  loss 0.0188  7079 ms/batch
+  ep 4 batch 175/198  loss 0.0184  7267 ms/batch
+ep  4  loss 0.0177  dev EER 0.63%  (lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  1634s
+  ep 5 batch 25/198  loss 0.0133  8223 ms/batch
+Traceback (most recent call last):
+  File "C:\Users\ATHARV\OneDrive\Desktop\SIH\finetune_indic.py", line 164, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\ATHARV\OneDrive\Desktop\SIH\finetune_indic.py", line 132, in main
+    opt.zero_grad(); loss.backward()
+                     ~~~~~~~~~~~~~^^
+  File "C:\Users\ATHARV\AppData\Local\Programs\Python\Python313\Lib\site-packages\torch\_tensor.py", line 630, in backward
+    torch.autograd.backward(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, gradient, retain_graph, create_graph, inputs=inputs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ATHARV\AppData\Local\Programs\Python\Python313\Lib\site-packages\torch\autograd\__init__.py", line 364, in backward
+    _engine_run_backward(
+    ~~~~~~~~~~~~~~~~~~~~^
+        tensors,
+        ^^^^^^^^
+    ...<5 lines>...
+        accumulate_grad=True,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ATHARV\AppData\Local\Programs\Python\Python313\Lib\site-packages\torch\autograd\graph.py", line 865, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        t_outputs, *args, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )  # Calls into the C++ engine to run the backward pass
+    ^
+torch.AcceleratorError: CUDA error: out of memory
+Search for `cudaErrorMemoryAllocation' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
