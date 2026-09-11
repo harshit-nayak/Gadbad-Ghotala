@@ -121,3 +121,18 @@ def test_12_malformed_truncated_sig_is_unverifiable_without_crashing(env):
     sig.write_text('{"version": 1, "algori')  # truncated JSON
     result = _verify(env, doc)  # must not raise
     assert result.status is Status.UNVERIFIABLE
+
+
+def test_13_chain_check_runs_before_signature_check_is_invalid(env):
+    """A self-signed (untrusted) cert whose bundled signature is *also*
+    broken must still come back INVALID, not TAMPERED. That only holds if
+    the chain check (step 3) runs and fails before the signature check
+    (step 5) gets a chance to — verifying a valid self-signed key would
+    otherwise let it reach step 6 and misreport the failure."""
+    from docsign import crypto
+
+    rogue_cert, rogue_key = env.self_signed()
+    doc = env.document(b"forged authority, and the signature is broken too")
+    mismatched_digest = crypto.hash_bytes(b"an entirely different payload")
+    env.sign(doc, cert=rogue_cert, key=rogue_key, sign_over_digest=mismatched_digest)
+    assert _verify(env, doc).status is Status.INVALID

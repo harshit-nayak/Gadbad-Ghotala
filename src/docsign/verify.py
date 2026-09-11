@@ -39,6 +39,9 @@ class VerificationResult:
     status: Status
     signer_name: Optional[str]
     signer_id: Optional[str]
+    certificate_valid_until: Optional[_dt.datetime]
+    document_digest: Optional[str]  # full 64-char hex, set once recomputed
+    filename: Optional[str]
     reason: str
 
 
@@ -52,9 +55,17 @@ def verify_document(
     *,
     root_cert_path: PathLike = DEFAULT_ROOT_PATH,
 ) -> VerificationResult:
-    """Run the pipeline in order, short-circuiting on the first failure."""
+    """Run the pipeline in order, short-circuiting on the first failure.
+
+    Step 5 (signature) always runs before step 6 (digest comparison): the
+    Ed25519 signature is what makes the bundle's ``digest`` field trustworthy
+    in the first place. Comparing digests first would let an attacker who
+    controls the ``.sig`` substitute any digest they like before the check
+    that is supposed to catch exactly that.
+    """
     document_path = Path(document_path)
     sig_path = Path(sig_path) if sig_path else _bundle.sig_path_for(document_path)
+    filename = document_path.name
 
     # 1. .sig present, valid JSON, known version, required fields, decodable.
     try:
@@ -64,8 +75,7 @@ def verify_document(
     except _bundle.BundleError as exc:
         return VerificationResult(
             Status.UNVERIFIABLE,
-            None,
-            None,
+            None, None, None, None, filename,
             _unverifiable_reason(sig_path, exc),
         )
 
@@ -74,7 +84,7 @@ def verify_document(
         cert = x509.load_pem_x509_certificate(data["certificate"].encode("ascii"))
     except (ValueError, UnicodeEncodeError):
         return VerificationResult(
-            Status.INVALID, None, None,
+            Status.INVALID, None, None, None, None, filename,
             "The embedded certificate could not be parsed.",
         )
 
@@ -83,45 +93,39 @@ def verify_document(
         root_cert = _load_root(root_cert_path)
     except (FileNotFoundError, ValueError) as exc:
         return VerificationResult(
-            Status.INVALID, None, None,
+            Status.INVALID, None, None, None, None, filename,
             f"The local root certificate could not be loaded ({exc}).",
         )
     try:
         cert.verify_directly_issued_by(root_cert)
     except Exception:  # noqa: BLE001 - any failure here means "not trusted"
         return VerificationResult(
-            Status.INVALID, None, None,
+            Status.INVALID, None, None, None, None, filename,
             "The signer's certificate was not issued by the trusted internal root CA.",
         )
 
     # Identity is trustworthy from here on — surface it even on later failures.
     name, emp_id = _ca.cert_identity(cert)
     who = _describe(name, emp_id)
+    valid_until = cert.not_valid_after_utc
 
     # 4. Certificate is within its validity window.
     now = _dt.datetime.now(_dt.timezone.utc)
     if not (cert.not_valid_before_utc <= now <= cert.not_valid_after_utc):
-        expiry = cert.not_valid_after_utc.strftime("%Y-%m-%d")
+        expiry = valid_until.strftime("%Y-%m-%d")
         return VerificationResult(
-            Status.EXPIRED, name, emp_id,
+            Status.EXPIRED, name, emp_id, valid_until, None, filename,
             f"{who}'s certificate was outside its validity window "
             f"(expired {expiry}). The document itself may be intact — this is "
             "a different situation from a modified document.",
         )
 
-    # 5. Recomputed SHA-256 of the file matches the signed digest.
-    actual_digest = crypto.hash_file(document_path)
-    if not crypto.digests_equal(actual_digest, claimed_digest):
-        return VerificationResult(
-            Status.TAMPERED, name, emp_id,
-            "Document has been modified after signing. Do not act on it.",
-        )
-
-    # 6. Ed25519 signature verifies over the digest.
+    # 5. Ed25519 signature verifies over the digest claimed in the bundle.
+    # This must happen before step 6: it is what makes claimed_digest trustworthy.
     pub = cert.public_key()
     if not isinstance(pub, Ed25519PublicKey):
         return VerificationResult(
-            Status.INVALID, name, emp_id,
+            Status.INVALID, name, emp_id, valid_until, None, filename,
             "The certificate does not carry an Ed25519 key.",
         )
     try:
@@ -130,14 +134,23 @@ def verify_document(
         sig_ok = False
     if not sig_ok:
         return VerificationResult(
-            Status.TAMPERED, name, emp_id,
-            "The signature does not match the document. It may have been "
-            "modified, or the signature was not produced over this content.",
+            Status.TAMPERED, name, emp_id, valid_until, None, filename,
+            "The signature does not match the claimed digest. The signature "
+            "bundle is inconsistent — do not act on this document.",
+        )
+
+    # 6. Recomputed SHA-256 of the file matches the now-trustworthy digest.
+    actual_digest = crypto.hash_file(document_path)
+    if not crypto.digests_equal(actual_digest, claimed_digest):
+        return VerificationResult(
+            Status.TAMPERED, name, emp_id, valid_until, actual_digest.hex(), filename,
+            "Document has been modified after signing. Do not act on it.",
         )
 
     # 7. Everything checks out.
     return VerificationResult(
-        Status.VALID, name, emp_id, "Document unchanged since signing."
+        Status.VALID, name, emp_id, valid_until, actual_digest.hex(), filename,
+        "Document unchanged since signing.",
     )
 
 

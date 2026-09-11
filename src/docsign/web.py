@@ -198,8 +198,14 @@ def create_app(
                 "status": result.status.value,
                 "signer_name": result.signer_name,
                 "signer_id": result.signer_id,
+                "certificate_valid_until": (
+                    result.certificate_valid_until.strftime("%Y-%m-%d")
+                    if result.certificate_valid_until
+                    else None
+                ),
+                "document_digest": result.document_digest,
                 "reason": result.reason,
-                "document": Path(doc.filename).name,
+                "document": result.filename or Path(doc.filename).name,
             }
         )
 
@@ -423,7 +429,13 @@ function showVerdict(target, r) {
     const who = (r.signer_name || 'unknown') + (r.signer_id ? ' (' + r.signer_id + ')' : '');
     box.append(el('p', { textContent: 'Signed by ' + who }));
   }
+  if (r.certificate_valid_until) {
+    box.append(el('p', { textContent: 'Certificate valid until ' + r.certificate_valid_until }));
+  }
   box.append(el('p', { textContent: r.reason }));
+  if (r.document_digest) {
+    box.append(el('p', {}, el('code', { textContent: 'SHA-256 ' + r.document_digest })));
+  }
   target.replaceChildren(box);
 }
 

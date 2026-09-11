@@ -226,19 +226,27 @@ The pipeline, in order, short-circuiting on the first failure:
 2. Embedded certificate parses → else `INVALID`
 3. Certificate chains to the root in `trust/root_ca.pem` → else `INVALID`
 4. Certificate is within its validity window → else `EXPIRED`
-5. Recomputed SHA-256 of the file matches `digest` → else `TAMPERED`
-6. Ed25519 signature verifies over the digest → else `TAMPERED`
+5. Ed25519 signature verifies over the `digest` claimed in the bundle → else `TAMPERED`
+6. Recomputed SHA-256 of the file matches that digest → else `TAMPERED`
 7. Otherwise → `VALID`
+
+Step 5 must precede step 6: the signature is what makes the bundle's `digest`
+field trustworthy. An attacker who controls the `.sig` can set `digest` to
+anything; verifying the signature over it first is what catches that
+(attack case 10 below).
 
 Return a structured result, never a bare boolean:
 
 ```python
 @dataclass
 class VerificationResult:
-    status: Status          # VALID | TAMPERED | EXPIRED | INVALID | UNVERIFIABLE
+    status: Status                            # VALID | TAMPERED | EXPIRED | INVALID | UNVERIFIABLE
     signer_name: str | None
     signer_id: str | None
-    reason: str             # one plain-English line for the operator
+    certificate_valid_until: datetime | None
+    document_digest: str | None               # full 64-char hex, once recomputed
+    filename: str | None
+    reason: str                                # one plain-English line for the operator
 ```
 
 ### Phase 6 — CLI (`cli.py`)
@@ -270,7 +278,8 @@ this under time pressure should not have to interpret anything:
   This document cannot be verified. Ask the sender to sign and resend.
 ```
 
-Exit codes: `0` valid, `1` tampered/invalid, `2` unverifiable, `3` expired. Scripts and
+Exit codes: `0` valid, `1` tampered, `2` unverifiable, `3` expired, `4` invalid. `TAMPERED`
+and `INVALID` are separate codes — they mean different things operationally. Scripts and
 workflow integrations depend on these being stable.
 
 ---
@@ -318,11 +327,14 @@ status, not merely "not valid."
 | 10 | `digest` field edited to match a tampered file | `TAMPERED` (signature covers the digest) |
 | 11 | `signed_at` backdated | `VALID` — timestamp is not trusted, and the test documents that |
 | 12 | Malformed / truncated `.sig` | `UNVERIFIABLE`, no crash |
+| 13 | Valid signature verified before the chain check would allow it | `INVALID` — chain check (step 3) must run and fail before the signature check (step 5) |
 
 Case 10 is the important one — it proves the digest is inside the signed data rather than
 being trusted as-is. Case 5 is the realistic attack: stripping a signature is far cheaper
 than forging one, which is why organisational policy on `UNVERIFIABLE` matters more than any
-cryptography here.
+cryptography here. Case 13 protects the pipeline ordering itself: a future refactor that
+moved the signature check ahead of the chain check would still fail this test even though
+cases 7-8 alone would not catch it.
 
 Have someone who did not write `verify.py` produce additional attack cases. Self-authored
 attack suites are circular.
@@ -371,7 +383,7 @@ file type, so keep it as the general path even if the Adobe route is added for P
 ## 12. Definition of done
 
 - [ ] `init-ca`, `enrol`, `sign`, `verify` all work end to end
-- [ ] All twelve attack tests pass with the exact expected status
+- [ ] All thirteen attack tests pass with the exact expected status
 - [ ] Verification makes no network calls (enforced by test)
 - [ ] Private keys are in the OS keystore by default
 - [ ] Exit codes are stable and documented

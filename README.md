@@ -193,14 +193,18 @@ Verification output leads with the verdict and names the signer:
 
 ### Exit codes
 
-Stable — scripts and workflow integrations depend on them:
+Stable — scripts and workflow integrations depend on them. `TAMPERED` and
+`INVALID` are separate codes because they mean different things operationally:
+`TAMPERED` implies a known signer whose document was changed after signing;
+`INVALID` implies the certificate itself isn't trustworthy.
 
 | Code | Meaning |
 |---|---|
 | `0` | `VALID` |
-| `1` | `TAMPERED` or `INVALID` |
+| `1` | `TAMPERED` |
 | `2` | `UNVERIFIABLE` |
 | `3` | `EXPIRED` |
+| `4` | `INVALID` |
 
 ---
 
@@ -284,11 +288,18 @@ In order, short-circuiting on the first failure:
 2. Embedded certificate parses → else `INVALID`
 3. Certificate chains to the root in `trust/root_ca.pem` → else `INVALID`
 4. Certificate is within its validity window → else `EXPIRED`
-5. Recomputed SHA-256 of the file matches `digest` → else `TAMPERED`
-6. Ed25519 signature verifies over the digest → else `TAMPERED`
+5. Ed25519 signature verifies over the `digest` claimed in the bundle → else `TAMPERED`
+6. Recomputed SHA-256 of the file matches that (now-trustworthy) digest → else `TAMPERED`
 7. Otherwise → `VALID`
 
-`verify.py` returns a structured `VerificationResult`, never a bare boolean.
+Step 5 must run before step 6: the Ed25519 signature is what makes the bundle's
+`digest` field trustworthy in the first place. Comparing digests before
+verifying the signature would let an attacker who controls the `.sig` file
+substitute any digest they like — see `tests/test_attacks.py` case 10.
+
+`verify.py` returns a structured `VerificationResult` (status, signer identity,
+certificate validity, the recomputed digest, filename, and a plain-English
+reason), never a bare boolean.
 
 ---
 
@@ -301,8 +312,8 @@ python -m pytest
 - `tests/test_crypto.py` — core primitives (round-trip, flipped byte, wrong
   key, wrong key direction).
 - `tests/test_verify.py` — pipeline behaviour and the no-network guarantee.
-- `tests/test_attacks.py` — the twelve adversarial cases from the build guide,
-  each asserting a specific status.
+- `tests/test_attacks.py` — the thirteen adversarial cases from the build
+  guide, each asserting a specific status.
 
 The build guide asks that the attack cases be written by someone who did not
 write `verify.py`; that separation was not available for this prototype and a

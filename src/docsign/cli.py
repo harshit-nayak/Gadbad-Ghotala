@@ -8,9 +8,10 @@ other modules.
 
 Exit codes (stable — scripts depend on them):
     0  valid
-    1  tampered / invalid
+    1  tampered
     2  unverifiable
     3  expired
+    4  invalid
 """
 
 from __future__ import annotations
@@ -34,16 +35,18 @@ DEFAULT_CA_DIR = Path(".ca")
 DEFAULT_STATE_DIR = Path(".docsign")
 
 EXIT_OK = 0
-EXIT_BAD = 1
+EXIT_TAMPERED = 1
 EXIT_UNVERIFIABLE = 2
 EXIT_EXPIRED = 3
+EXIT_INVALID = 4
+EXIT_BAD = 1  # generic command failure (e.g. bad args, missing CA) — not a verdict code
 
 _STATUS_EXIT = {
     Status.VALID: EXIT_OK,
-    Status.TAMPERED: EXIT_BAD,
-    Status.INVALID: EXIT_BAD,
+    Status.TAMPERED: EXIT_TAMPERED,
     Status.UNVERIFIABLE: EXIT_UNVERIFIABLE,
     Status.EXPIRED: EXIT_EXPIRED,
+    Status.INVALID: EXIT_INVALID,
 }
 
 
@@ -169,16 +172,26 @@ def cmd_verify(args: argparse.Namespace) -> int:
 _GLYPH_UNICODE = {
     Status.VALID: "✓ VALID",
     Status.TAMPERED: "✗ TAMPERED",
-    Status.EXPIRED: "✗ EXPIRED",
+    Status.EXPIRED: "! EXPIRED",
     Status.INVALID: "✗ INVALID",
     Status.UNVERIFIABLE: "? UNVERIFIABLE",
 }
 _GLYPH_ASCII = {
     Status.VALID: "[ OK ] VALID",
     Status.TAMPERED: "[FAIL] TAMPERED",
-    Status.EXPIRED: "[FAIL] EXPIRED",
+    Status.EXPIRED: "[WARN] EXPIRED",
     Status.INVALID: "[FAIL] INVALID",
     Status.UNVERIFIABLE: "[ ?? ] UNVERIFIABLE",
+}
+
+_ACTION = {
+    Status.VALID: None,
+    Status.TAMPERED: "DO NOT ACCEPT THIS DOCUMENT.",
+    Status.EXPIRED: "Historical validity requires trusted timestamp evidence if "
+    "available.\n  Ask the sender to re-enrol and re-sign.",
+    Status.INVALID: "DO NOT ACCEPT THIS DOCUMENT.",
+    Status.UNVERIFIABLE: "DO NOT ACCEPT AS AUTHENTICATED.\n  Ask the sender to sign "
+    "and resend.",
 }
 
 
@@ -196,13 +209,53 @@ def _glyphs() -> dict:
 
 
 def _render(result: VerificationResult) -> None:
-    print(_glyphs()[result.status])
-    if result.signer_name or result.signer_id:
-        who = result.signer_name or "unknown"
-        if result.signer_id:
-            who += f" ({result.signer_id})"
-        print(f"  Signed by {who}")
-    print(f"  {result.reason}")
+    r = result
+    print(_glyphs()[r.status])
+    print()
+
+    if r.signer_name or r.signer_id:
+        print("Signer")
+        print(f"  {r.signer_name or 'unknown'}")
+        if r.signer_id:
+            print(f"  Employee ID: {r.signer_id}")
+        print()
+
+    if r.certificate_valid_until is not None:
+        print("Certificate")
+        cert_status = "EXPIRED" if r.status is Status.EXPIRED else "VALID"
+        print(f"  Status: {cert_status}")
+        if r.status is Status.EXPIRED:
+            print(f"  Expired: {r.certificate_valid_until:%Y-%m-%d}")
+        else:
+            print(f"  Valid until: {r.certificate_valid_until:%Y-%m-%d}")
+        print()
+
+    if r.filename:
+        print("Document")
+        print(f"  Filename: {r.filename}")
+        if r.status is Status.TAMPERED:
+            print("  Digest status: MISMATCH")
+        elif r.document_digest:
+            print(f"  SHA-256: {r.document_digest}")
+        print()
+
+    if r.status in (Status.VALID, Status.TAMPERED):
+        print("Signature")
+        print(f"  Algorithm: {crypto.SIGNATURE_ALGORITHM}")
+        print(f"  Status: {'VERIFIED' if r.status is Status.VALID else 'INVALID'}")
+        print()
+
+    if r.status is Status.VALID:
+        print("Integrity")
+        print(f"  {r.reason}")
+    else:
+        print(f"  {r.reason}")
+
+    action = _ACTION.get(r.status)
+    if action:
+        print()
+        print("Action")
+        print(f"  {action}")
 
 
 # --------------------------------------------------------------------------- #
