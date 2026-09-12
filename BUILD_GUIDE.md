@@ -25,13 +25,18 @@ Do not build these. They were considered and deliberately cut.
 | Excluded | Why |
 |---|---|
 | Encryption | Requirement is authenticity + integrity, not confidentiality. The document stays readable. |
-| Document registry / database | Verification is local. Nothing to look up. |
 | Watermarking | Only useful for print/scan survivability and registry lookup. Neither is needed. |
 | Canonicalisation | We sign raw bytes. Any re-encode *should* fail verification. |
 | Replay / context binding | Circulation is explicitly not a concern. |
 | Online revocation (CRL/OCSP) | Replaced by short-lived certificates. |
 | OCR, forensics, ML anomaly detection | Cryptography answers the question. These add failure modes, not security. |
 | Cross-organisation trust | Single internal root only. |
+
+**Update:** a signature registry (database) was later added — see the separate signature
+registry guide and README's "Signature registry" section. It is a lookup convenience, not a
+trust authority: verification still re-runs the full cryptographic pipeline against whatever
+it retrieves, and it changes nothing about the core scope decisions above. `.sig`-only
+verification, unchanged, still works with no registry configured at all.
 
 ### Known limits — state these in the README, do not paper over them
 - **Insider fraud is not prevented.** A valid signature by an authorised employee on a false

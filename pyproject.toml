@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 web = ["flask>=3"]
+db = ["sqlalchemy>=2", "alembic>=1.13"]
 
 [project.scripts]
 docsign = "docsign.cli:main"

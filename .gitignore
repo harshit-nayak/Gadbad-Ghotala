@@ -12,6 +12,14 @@ root_ca_key.pem
 # Signed artefacts produced while testing
 *.sig
 
+# Signature registry — per-deployment runtime data (signatures + employee
+# certificates), never a fixture to commit. See README's Signature registry
+# section: back this up separately, it is not part of the source tree.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # --- Python -----------------------------------------------------------------
 __pycache__/
 *.py[cod]

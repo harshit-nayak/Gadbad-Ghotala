@@ -4,7 +4,9 @@ other modules.
     docsign init-ca                 # admin, once
     docsign enrol --name --email --id
     docsign sign <file>
-    docsign verify <file>
+    docsign verify <file>           # DB mode if configured, else .sig
+    docsign verify <file> --offline # force the offline .sig path
+    docsign import-sig <file> <file>.sig
 
 Exit codes (stable — scripts depend on them):
     0  valid
@@ -12,11 +14,14 @@ Exit codes (stable — scripts depend on them):
     2  unverifiable
     3  expired
     4  invalid
+    5  verification unavailable (registry unreachable/timed out — not a
+       verdict about the document; see docsign verify --offline)
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as _dt
 import sys
 from pathlib import Path
@@ -25,10 +30,11 @@ from cryptography.hazmat.primitives import serialization
 
 from . import ca as _ca
 from . import bundle as _bundle
+from . import config
 from . import crypto
 from . import keystore
-from . import registry
-from .verify import Status, VerificationResult, verify_document
+from . import enrollment
+from .verify import ImportRejected, Status, VerificationResult, verify_document, verify_from_db
 
 DEFAULT_TRUST_DIR = Path("trust")
 DEFAULT_CA_DIR = Path(".ca")
@@ -39,6 +45,7 @@ EXIT_TAMPERED = 1
 EXIT_UNVERIFIABLE = 2
 EXIT_EXPIRED = 3
 EXIT_INVALID = 4
+EXIT_VERIFICATION_UNAVAILABLE = 5
 EXIT_BAD = 1  # generic command failure (e.g. bad args, missing CA) — not a verdict code
 
 _STATUS_EXIT = {
@@ -47,6 +54,7 @@ _STATUS_EXIT = {
     Status.UNVERIFIABLE: EXIT_UNVERIFIABLE,
     Status.EXPIRED: EXIT_EXPIRED,
     Status.INVALID: EXIT_INVALID,
+    Status.VERIFICATION_UNAVAILABLE: EXIT_VERIFICATION_UNAVAILABLE,
 }
 
 
@@ -94,7 +102,7 @@ def cmd_enrol(args: argparse.Namespace) -> int:
         state = Path(args.state_dir)
         state.mkdir(parents=True, exist_ok=True)
         (state / "default_id").write_text(args.id, encoding="utf-8")
-        registry.register(state, cert, args.email)
+        enrollment.register(state, cert, args.email)
 
     where = args.insecure_keyfile or "OS keystore"
     print(f"Enrolled {args.name} ({args.id})")
@@ -153,17 +161,98 @@ def cmd_sign(args: argparse.Namespace) -> int:
     name, emp_id = _ca.cert_identity(cert)
     print(f"Signed {document.name} as {name} ({emp_id})")
     print(f"  -> {out}")
+
+    # Best-effort registry registration. The .sig file above is the durable,
+    # offline-verifiable artefact regardless of what happens here — DB
+    # storage is a convenience, never a requirement for a sign to succeed.
+    # If DATABASE_URL isn't configured at all, this is silently skipped: no
+    # DB was asked for, so there is nothing to report (see the README's
+    # "CLI signing audit gap" note — no audit event fires for this signing
+    # action in that case).
+    if config.DATABASE_CONFIGURED:
+        try:
+            from . import registry as _registry
+
+            record_id = _registry.store_signature(
+                document_hash=digest.hex(),
+                signature=base64.b64encode(signature).decode("ascii"),
+                certificate_pem=cert.public_bytes(serialization.Encoding.PEM).decode("ascii"),
+                employee_id=emp_id or "UNKNOWN",
+                employee_name=name or "Unknown",
+                key_id=_registry.compute_key_id(cert),
+                signed_at=data["signed_at"],
+                filename=document.name,
+                timestamp_token=None,
+            )
+        except ImportError:
+            print(
+                "  registry: DATABASE_URL is set but SQLAlchemy is not installed "
+                "(pip install 'docsign[db]') — .sig only, not registered.",
+                file=sys.stderr,
+            )
+        except Exception as exc:  # registry.RegistryUnavailableError, etc.
+            print(
+                f"  registry: could not register this signature ({exc}) — "
+                ".sig file above is unaffected.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"  registered in signature registry (record id {record_id})")
+
     return EXIT_OK
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    result = verify_document(
-        args.file,
-        sig_path=args.sig,
-        root_cert_path=args.root,
-    )
+    # Explicit --offline, or an explicit --sig path, both mean "I have a
+    # .sig file, use it" — the offline path is fully deterministic then.
+    # Otherwise: DB mode is the default only if a registry has actually been
+    # configured — either DOCSIGN_DATABASE_URL is set, or this invocation
+    # explicitly passed --database-url. An unconfigured deployment falls
+    # back to .sig transparently, matching pre-registry behaviour.
+    db_configured = config.DATABASE_CONFIGURED or bool(args.database_url)
+    use_offline = args.offline or bool(args.sig) or not db_configured
+
+    if use_offline:
+        result = verify_document(args.file, sig_path=args.sig, root_cert_path=args.root)
+    else:
+        result = verify_from_db(
+            args.file, root_cert_path=args.root, database_url=args.database_url
+        )
+
     _render(result)
     return _STATUS_EXIT[result.status]
+
+
+def cmd_import_sig(args: argparse.Namespace) -> int:
+    from .verify import import_verified_sig
+
+    try:
+        record_id, result = import_verified_sig(
+            args.file,
+            args.sig,
+            root_cert_path=args.root,
+            database_url=args.database_url,
+        )
+    except ImportRejected as exc:
+        print(
+            f"Cannot import: {exc.result.status.value} — {exc.result.reason}",
+            file=sys.stderr,
+        )
+        return _STATUS_EXIT.get(exc.result.status, EXIT_BAD)
+    except ImportError:
+        print(
+            "The signature registry needs SQLAlchemy. Install it with:\n"
+            "    python -m pip install 'docsign[db]'",
+            file=sys.stderr,
+        )
+        return EXIT_BAD
+    except Exception as exc:  # registry.RegistryUnavailableError, etc.
+        print(f"Cannot import: {exc}", file=sys.stderr)
+        return EXIT_VERIFICATION_UNAVAILABLE
+
+    print(f"Imported {Path(args.file).name} into the registry (record id {record_id}).")
+    print(f"  status at import: {result.status.value}")
+    return EXIT_OK
 
 
 # --------------------------------------------------------------------------- #
@@ -175,6 +264,7 @@ _GLYPH_UNICODE = {
     Status.EXPIRED: "! EXPIRED",
     Status.INVALID: "✗ INVALID",
     Status.UNVERIFIABLE: "? UNVERIFIABLE",
+    Status.VERIFICATION_UNAVAILABLE: "⚠ VERIFICATION UNAVAILABLE",
 }
 _GLYPH_ASCII = {
     Status.VALID: "[ OK ] VALID",
@@ -182,6 +272,7 @@ _GLYPH_ASCII = {
     Status.EXPIRED: "[WARN] EXPIRED",
     Status.INVALID: "[FAIL] INVALID",
     Status.UNVERIFIABLE: "[ ?? ] UNVERIFIABLE",
+    Status.VERIFICATION_UNAVAILABLE: "[WARN] VERIFICATION UNAVAILABLE",
 }
 
 _ACTION = {
@@ -192,6 +283,7 @@ _ACTION = {
     Status.INVALID: "DO NOT ACCEPT THIS DOCUMENT.",
     Status.UNVERIFIABLE: "DO NOT ACCEPT AS AUTHENTICATED.\n  Ask the sender to sign "
     "and resend.",
+    # VERIFICATION_UNAVAILABLE's action is built in _render (it names the file).
 }
 
 
@@ -213,7 +305,15 @@ def _render(result: VerificationResult) -> None:
     print(_glyphs()[r.status])
     print()
 
-    if r.signer_name or r.signer_id:
+    if len(r.signers) > 1:
+        print("Signers")
+        for s in r.signers:
+            line = s.employee_name or "unknown"
+            if s.employee_id:
+                line += f" ({s.employee_id})"
+            print(f"  {line}")
+        print()
+    elif r.signer_name or r.signer_id:
         print("Signer")
         print(f"  {r.signer_name or 'unknown'}")
         if r.signer_id:
@@ -252,6 +352,11 @@ def _render(result: VerificationResult) -> None:
         print(f"  {r.reason}")
 
     action = _ACTION.get(r.status)
+    if r.status is Status.VERIFICATION_UNAVAILABLE and r.filename:
+        action = (
+            "If you have the .sig file, run:\n"
+            f"    docsign verify {r.filename} --offline"
+        )
     if action:
         print()
         print("Action")
@@ -300,15 +405,45 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sg.set_defaults(func=cmd_sign)
 
-    vf = sub.add_parser("verify", help="verify a document against its <file>.sig")
+    vf = sub.add_parser(
+        "verify",
+        help="verify a document — signature registry by default if configured, "
+        "else its <file>.sig",
+    )
     vf.add_argument("file")
-    vf.add_argument("--sig", help="path to the .sig bundle (default: <file>.sig)")
+    vf.add_argument("--sig", help="path to the .sig bundle (implies --offline)")
+    vf.add_argument(
+        "--offline", action="store_true",
+        help="force the offline .sig path even if a registry is configured",
+    )
+    vf.add_argument(
+        "--database-url", default=None,
+        help="override the signature registry connection string "
+        "(default: DOCSIGN_DATABASE_URL / sqlite:///docsign.db)",
+    )
     vf.add_argument(
         "--root",
         default=str(DEFAULT_TRUST_DIR / _ca.ROOT_CERT_FILENAME),
         help="path to the trusted root certificate",
     )
     vf.set_defaults(func=cmd_verify)
+
+    im = sub.add_parser(
+        "import-sig",
+        help="verify a .sig bundle and, if it qualifies, store it in the registry",
+    )
+    im.add_argument("file")
+    im.add_argument("sig")
+    im.add_argument(
+        "--root",
+        default=str(DEFAULT_TRUST_DIR / _ca.ROOT_CERT_FILENAME),
+        help="path to the trusted root certificate",
+    )
+    im.add_argument(
+        "--database-url", default=None,
+        help="override the signature registry connection string",
+    )
+    im.set_defaults(func=cmd_import_sig)
 
     sv = sub.add_parser("serve", help="run the local web frontend (sign / verify / admin)")
     sv.add_argument("--host", default="127.0.0.1", help="bind address (default: localhost)")

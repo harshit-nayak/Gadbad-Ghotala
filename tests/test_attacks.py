@@ -136,3 +136,89 @@ def test_13_chain_check_runs_before_signature_check_is_invalid(env):
     mismatched_digest = crypto.hash_bytes(b"an entirely different payload")
     env.sign(doc, cert=rogue_cert, key=rogue_key, sign_over_digest=mismatched_digest)
     assert _verify(env, doc).status is Status.INVALID
+
+
+# --------------------------------------------------------------------------- #
+# Signature registry attacks (registry guide, DB mode — needs the 'db' extra)
+# --------------------------------------------------------------------------- #
+pytest.importorskip("sqlalchemy", reason="DB mode attack tests need the 'db' extra")
+
+from docsign.verify import verify_from_db, import_verified_sig, ImportRejected  # noqa: E402
+
+
+def _verify_db(env, document, **kw):
+    return verify_from_db(
+        document, root_cert_path=env.root_cert_path, database_url=env.db_url, **kw
+    )
+
+
+def test_14_db_record_tampered_signature_bytes_is_tampered(db_env):
+    """The stored signature bytes don't verify against the recorded hash —
+    a corrupted registry row, not document tampering (the hash still
+    matches the actual file). See docsign.md Assumption 5."""
+    doc = db_env.document(b"registry row will be corrupted")
+    record_id = db_env.db_sign(doc)
+    db_env.corrupt_record(record_id, signature="Y29ycnVwdGVkIQ==")  # base64 garbage
+    assert _verify_db(db_env, doc).status is Status.TAMPERED
+
+
+def test_15_db_record_cert_does_not_chain_is_invalid(db_env):
+    rogue_cert, rogue_key = db_env.self_signed()
+    doc = db_env.document(b"forged authority via the registry")
+    db_env.db_sign(doc, cert=rogue_cert, key=rogue_key)
+    assert _verify_db(db_env, doc).status is Status.INVALID
+
+
+def test_16_importing_a_tampered_sig_is_rejected_not_stored(db_env):
+    from docsign import crypto, registry as _registry
+
+    doc = db_env.document(b"original content")
+    sig = db_env.sign(doc)
+    doc.write_bytes(b"attacker-substituted content")  # tamper after signing
+
+    with pytest.raises(ImportRejected) as exc_info:
+        import_verified_sig(doc, sig, root_cert_path=db_env.root_cert_path,
+                             database_url=db_env.db_url)
+    assert exc_info.value.result.status is Status.TAMPERED
+
+    doc_hash = crypto.hash_file(doc).hex()
+    assert _registry.lookup_signatures(doc_hash, database_url=db_env.db_url) == []
+
+
+def test_17_importing_a_sig_from_a_different_root_is_rejected_not_stored(db_env):
+    from docsign import crypto, registry as _registry
+
+    foreign_cert, foreign_key = db_env.foreign_ca()
+    doc = db_env.document(b"issued by a different company entirely")
+    sig = db_env.sign(doc, cert=foreign_cert, key=foreign_key)
+
+    with pytest.raises(ImportRejected) as exc_info:
+        import_verified_sig(doc, sig, root_cert_path=db_env.root_cert_path,
+                             database_url=db_env.db_url)
+    assert exc_info.value.result.status is Status.INVALID
+
+    doc_hash = crypto.hash_file(doc).hex()
+    assert _registry.lookup_signatures(doc_hash, database_url=db_env.db_url) == []
+
+
+def test_18_db_record_empty_certificate_pem_is_invalid_no_crash(db_env):
+    doc = db_env.document(b"corrupted certificate column")
+    record_id = db_env.db_sign(doc)
+    db_env.corrupt_record(record_id, certificate_pem="")
+
+    result = _verify_db(db_env, doc)  # must not raise
+    assert result.status is Status.INVALID
+
+
+def test_19_one_valid_one_invalid_signer_reports_the_valid_one(db_env):
+    """An attacker adds a second, untrustworthy row for the same document
+    hash hoping to confuse the verdict. The legitimate signer must still be
+    the one reported, and the overall result must still be VALID."""
+    rogue_cert, rogue_key = db_env.self_signed()
+    doc = db_env.document(b"legit signer plus an attacker-added row")
+    db_env.db_sign(doc)  # legitimate: EMP10452
+    db_env.db_sign(doc, cert=rogue_cert, key=rogue_key)  # attacker's own cert
+
+    result = _verify_db(db_env, doc)
+    assert result.status is Status.VALID
+    assert [s.employee_id for s in result.signers] == ["EMP10452"]

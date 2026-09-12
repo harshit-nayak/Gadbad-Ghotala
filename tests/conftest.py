@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import datetime as _dt
 import json
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -19,6 +20,10 @@ from cryptography.x509.oid import NameOID
 from docsign import bundle as _bundle
 from docsign import ca as _ca
 from docsign import crypto
+
+# Registry (DB) support needs the optional 'db' extra (sqlalchemy). Import it
+# lazily, inside the Env methods that need it, so conftest.py itself — and
+# every test file that doesn't touch the registry — works without it.
 
 
 def _self_signed(name: str) -> tuple[x509.Certificate, Ed25519PrivateKey]:
@@ -53,6 +58,7 @@ class Env:
     root_key: Ed25519PrivateKey
     emp_cert: x509.Certificate
     emp_key: Ed25519PrivateKey
+    db_url: str
 
     # -- document + signing helpers ---------------------------------------- #
     def document(self, content: bytes, name: str = "invoice_q3.pdf") -> Path:
@@ -127,6 +133,60 @@ class Env:
             "EMP10452",
         )
 
+    # -- registry (DB) helpers ----------------------------------------------- #
+    def db_sign(
+        self,
+        document: Path,
+        *,
+        cert: Optional[x509.Certificate] = None,
+        key: Optional[Ed25519PrivateKey] = None,
+        sign_over_digest: Optional[bytes] = None,
+        store_digest: Optional[bytes] = None,
+        timestamp_token: Optional[str] = None,
+        source: str = "signed",
+        filename: Optional[str] = None,
+    ) -> int:
+        """Sign *document* and store the record straight in the registry
+        (no ``.sig`` file). Mirrors :meth:`sign`'s digest-decoupling knobs so
+        DB-mode tests can construct the same kinds of inconsistent records."""
+        from docsign import registry as _registry
+
+        cert = cert or self.emp_cert
+        key = key or self.emp_key
+        file_digest = crypto.hash_file(document)
+        signed_digest = sign_over_digest or file_digest
+        stored_digest = store_digest or file_digest
+        signature = key.sign(signed_digest)
+        name, emp_id = _ca.cert_identity(cert)
+        return _registry.store_signature(
+            document_hash=stored_digest.hex(),
+            signature=b64(signature),
+            certificate_pem=cert.public_bytes(serialization.Encoding.PEM).decode("ascii"),
+            employee_id=emp_id or "UNKNOWN",
+            employee_name=name or "Unknown",
+            key_id=_registry.compute_key_id(cert),
+            signed_at=_dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            filename=filename or document.name,
+            timestamp_token=timestamp_token,
+            source=source,
+            database_url=self.db_url,
+        )
+
+    def corrupt_record(self, record_id: int, **fields) -> None:
+        """Directly rewrite columns of a stored record via raw SQL, bypassing
+        the registry API — for simulating a corrupted/tampered DB row."""
+        path = self.db_url.removeprefix("sqlite:///")
+        conn = sqlite3.connect(path)
+        try:
+            set_clause = ", ".join(f"{k} = ?" for k in fields)
+            conn.execute(
+                f"UPDATE document_signatures SET {set_clause} WHERE id = ?",
+                (*fields.values(), record_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
 
 @pytest.fixture
 def env(tmp_path: Path) -> Env:
@@ -140,6 +200,8 @@ def env(tmp_path: Path) -> Env:
         "priya.sharma@company.internal",
         "EMP10452",
     )
+    db_url = (tmp_path / "docsign.db").as_posix()
+    db_url = "sqlite:///" + db_url
     return Env(
         tmp=tmp_path,
         root_cert_path=tmp_path / "trust" / _ca.ROOT_CERT_FILENAME,
@@ -147,7 +209,18 @@ def env(tmp_path: Path) -> Env:
         root_key=root_key,
         emp_cert=emp_cert,
         emp_key=emp_key,
+        db_url=db_url,
     )
+
+
+@pytest.fixture
+def db_env(env: Env) -> Env:
+    """``env`` with the registry schema already created."""
+    pytest.importorskip("sqlalchemy", reason="registry (DB) tests need the 'db' extra")
+    from docsign import registry as _registry
+
+    _registry.init_db(env.db_url)
+    return env
 
 
 # convenience for tests that want to hand-edit a bundle
