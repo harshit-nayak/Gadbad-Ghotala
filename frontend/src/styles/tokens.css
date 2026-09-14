@@ -1,0 +1,299 @@
+/* The product font's middle dot sits off-centre; borrow it from the system font. */
+@font-face {
+  font-family: 'GG Punctuation';
+  src: local('Arial'), local('Helvetica Neue'), local('Helvetica'), local('Segoe UI'), local('DejaVu Sans'), local('Liberation Sans');
+  unicode-range: U+00B7;
+}
+
+/*
+ * GG design tokens.
+ * Raw palette lives on :root. Components must use the semantic tokens,
+ * which change per product area via [data-theme].
+ */
+
+:root {
+  /* Palette */
+  --plum-950: #1d1524;
+  --plum-900: #2a1f33;
+  --plum-800: #3b2d47;
+  --plum-600: #5f4d6e;
+  --plum-400: #938599;
+  --plum-200: #dcd3e0;
+  --plum-100: #eee8f1;
+  --plum-50: #f8f4f9;
+
+  --rose-50: #fff2f6;
+  --rose-100: #ffe1eb;
+  --rose-200: #fbc3d6;
+  --rose-400: #ec6d98;
+  --rose-500: #d6336c;
+  --rose-600: #b8245a;
+  --rose-700: #921c48;
+
+  --lilac-50: #f5f2fe;
+  --lilac-100: #e9e3fd;
+  --lilac-300: #c3b5f8;
+  --lilac-500: #8f77ec;
+  --lilac-600: #7359d6;
+  --lilac-700: #5a43b3;
+
+  --red-50: #fef3f2;
+  --red-100: #fee4e2;
+  --red-200: #fdcdc9;
+  --red-400: #f26b61;
+  --red-500: #e0352b;
+  --red-600: #c4271d;
+  --red-700: #9b1c15;
+
+  --amber-50: #fff8eb;
+  --amber-100: #fdecc8;
+  --amber-400: #f0a53a;
+  --amber-600: #a36204;
+  --amber-700: #82500a;
+
+  --green-50: #eefbf4;
+  --green-100: #d3f3e1;
+  --green-400: #4cc38a;
+  --green-500: #15925f;
+  --green-600: #0f7a4e;
+  --green-700: #0b5e3c;
+
+  /* Type: one family, width axis carries hierarchy */
+  --font-sans: 'GG Punctuation', 'Anek Devanagari Variable', 'Nirmala UI', system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.3125rem;
+  --text-2xl: 1.625rem;
+  --text-3xl: 2.25rem;
+  --width-display: 88;
+  --width-body: 100;
+  --leading-tight: 1.15;
+  --leading-body: 1.45;
+
+  /* Space (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* Radius: scaled by hierarchy, not one value everywhere */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-device: 34px;
+  --radius-full: 999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+
+  /* Viz defaults (light); themes override */
+  --chart-1: var(--lilac-600);
+  --chart-2: var(--lilac-300);
+  --chart-3: var(--lilac-100);
+  --chart-4: var(--lilac-700);
+  --sig-voice: #7a5ee8;
+  --sig-synthetic: #cf4f8e;
+  --sig-context: #3f87e0;
+  --sig-prosody: #2fa7a7;
+  --sig-codec: #b58f3a;
+  --sig-noise: #7c8599;
+  --sig-watermark: #b3b8c6;
+  --wave-caller: var(--lilac-600);
+  --wave-employee: var(--plum-400);
+  --wave-idle: var(--plum-200);
+}
+
+/* Employee: light, blush field, reassuring */
+[data-theme='employee'] {
+  --bg: #fbf5f8;
+  --bg-glow-a: rgb(214 51 108 / 0.08);
+  --bg-glow-b: rgb(143 119 236 / 0.1);
+  --surface: #ffffff;
+  --surface-sunken: #faf6f9;
+  --line: #efe6ec;
+  --line-strong: #e0d3dc;
+  --ink: var(--plum-950);
+  --ink-muted: var(--plum-600);
+  --ink-subtle: var(--plum-400);
+  --action: var(--plum-900);
+  --action-hover: var(--plum-800);
+  --action-ink: #ffffff;
+  --brand: var(--rose-600);
+  --brand-soft: var(--rose-50);
+  --brand-line: var(--rose-100);
+  --analysis: var(--lilac-600);
+  --analysis-soft: var(--lilac-50);
+  --analysis-line: var(--lilac-100);
+  --risk: var(--red-600);
+  --risk-strong: var(--red-700);
+  --risk-soft: var(--red-50);
+  --risk-line: var(--red-100);
+  --warn: var(--amber-600);
+  --warn-soft: var(--amber-50);
+  --warn-line: var(--amber-100);
+  --safe: var(--green-600);
+  --safe-soft: var(--green-50);
+  --safe-line: var(--green-100);
+  --focus: var(--rose-500);
+  --shadow-raised: 0 1px 2px rgb(42 31 51 / 0.05), 0 4px 12px -4px rgb(42 31 51 / 0.08);
+  --shadow-device: 0 1px 0 rgb(42 31 51 / 0.04), 0 30px 70px -30px rgb(146 28 72 / 0.32),
+    0 12px 24px -16px rgb(42 31 51 / 0.18);
+  color-scheme: light;
+}
+
+/* Security / Fraud: charcoal-navy, purple secondary, technical */
+[data-theme='security'] {
+  --bg: #0c0f16;
+  --bg-glow-a: rgb(124 108 240 / 0.05);
+  --bg-glow-b: rgb(240 101 91 / 0.03);
+  --surface: #131823;
+  --surface-sunken: #0f131c;
+  --line: #222938;
+  --line-strong: #2e3647;
+  --ink: #e8ebf3;
+  --ink-muted: #a4acbe;
+  --ink-subtle: #6f7890;
+  --action: #7563ee;
+  --action-hover: #8575f3;
+  --action-ink: #ffffff;
+  --brand: #a597ff;
+  --brand-soft: rgb(124 108 240 / 0.14);
+  --brand-line: rgb(124 108 240 / 0.32);
+  --analysis: #a597ff;
+  --analysis-soft: rgb(124 108 240 / 0.13);
+  --analysis-line: rgb(124 108 240 / 0.3);
+  --risk: #f0655b;
+  --risk-strong: #ff8279;
+  --risk-soft: rgb(240 101 91 / 0.12);
+  --risk-line: rgb(240 101 91 / 0.32);
+  --warn: #f2a93b;
+  --warn-soft: rgb(242 169 59 / 0.12);
+  --warn-line: rgb(242 169 59 / 0.3);
+  --safe: #3fbf86;
+  --safe-soft: rgb(63 191 134 / 0.12);
+  --safe-line: rgb(63 191 134 / 0.3);
+  --focus: #a597ff;
+  --shadow-raised: 0 1px 0 rgb(255 255 255 / 0.025) inset, 0 10px 30px -18px rgb(0 0 0 / 0.7);
+  --shadow-device: 0 30px 70px -30px rgb(0 0 0 / 0.7);
+  --chart-1: #8b7cf6;
+  --chart-2: #5c6a8a;
+  --chart-3: #3a4460;
+  --chart-4: #c2b9ff;
+  --sig-voice: #8b7cf6;
+  --sig-synthetic: #d95f9f;
+  --sig-context: #4f9cf0;
+  --sig-prosody: #4cc0c0;
+  --sig-codec: #c9a85c;
+  --sig-noise: #7f8aa3;
+  --sig-watermark: #4d566c;
+  --wave-caller: #a597ff;
+  --wave-employee: #6b7894;
+  --wave-idle: #283043;
+  --tip-bg: #05070b;
+  --row-live: rgb(240 101 91 / 0.07);
+  --side-bg: #0e121a;
+  --nav-active-bg: rgb(124 108 240 / 0.14);
+  --map-dot: #262e40;
+  --table-head: #10141d;
+  color-scheme: dark;
+}
+
+/* Documents: clean light neutral, GG rose accent */
+[data-theme='documents'] {
+  --bg: #f9f8fa;
+  --bg-glow-a: rgb(214 51 108 / 0.04);
+  --bg-glow-b: rgb(143 119 236 / 0.04);
+  --surface: #ffffff;
+  --surface-sunken: #f6f4f7;
+  --line: #ebe7ee;
+  --line-strong: #dcd6e1;
+  --ink: var(--plum-950);
+  --ink-muted: #5d5668;
+  --ink-subtle: #8f889a;
+  --action: var(--plum-900);
+  --action-hover: var(--plum-800);
+  --action-ink: #ffffff;
+  --brand: var(--rose-600);
+  --brand-soft: var(--rose-50);
+  --brand-line: var(--rose-100);
+  --analysis: var(--lilac-600);
+  --analysis-soft: var(--lilac-50);
+  --analysis-line: var(--lilac-100);
+  --risk: var(--red-600);
+  --risk-strong: var(--red-700);
+  --risk-soft: var(--red-50);
+  --risk-line: var(--red-100);
+  --warn: var(--amber-600);
+  --warn-soft: var(--amber-50);
+  --warn-line: var(--amber-100);
+  --safe: var(--green-600);
+  --safe-soft: var(--green-50);
+  --safe-line: var(--green-100);
+  --focus: var(--rose-500);
+  --shadow-raised: 0 1px 2px rgb(29 21 36 / 0.04), 0 4px 14px -8px rgb(29 21 36 / 0.1);
+  --shadow-device: 0 24px 60px -30px rgb(29 21 36 / 0.25);
+  --chart-1: var(--rose-500);
+  --side-bg: #fcfbfc;
+  --nav-active-bg: var(--rose-50);
+  --nav-active-ink: var(--rose-700);
+  color-scheme: light;
+}
+
+/* Administrator: white and light lavender, purple primary, navy text */
+[data-theme='admin'] {
+  --bg: #f7f5ff;
+  --bg-glow-a: rgb(109 79 230 / 0.06);
+  --bg-glow-b: rgb(185 166 251 / 0.08);
+  --surface: #ffffff;
+  --surface-sunken: #f5f2ff;
+  --line: #ebe6fb;
+  --line-strong: #dbd2f7;
+  --ink: #1a1c3b;
+  --ink-muted: #51547a;
+  --ink-subtle: #8689a8;
+  --action: #5b3fd9;
+  --action-hover: #4a30c4;
+  --action-ink: #ffffff;
+  --brand: #6a4be3;
+  --brand-soft: #f0ebff;
+  --brand-line: #ddd2fd;
+  --analysis: #6a4be3;
+  --analysis-soft: #f0ebff;
+  --analysis-line: #ddd2fd;
+  --risk: var(--red-600);
+  --risk-strong: var(--red-700);
+  --risk-soft: var(--red-50);
+  --risk-line: var(--red-100);
+  --warn: var(--amber-600);
+  --warn-soft: var(--amber-50);
+  --warn-line: var(--amber-100);
+  --safe: var(--green-600);
+  --safe-soft: var(--green-50);
+  --safe-line: var(--green-100);
+  --focus: #6a4be3;
+  --shadow-raised: 0 1px 2px rgb(26 28 59 / 0.04), 0 6px 18px -10px rgb(74 48 196 / 0.14);
+  --shadow-device: 0 24px 60px -30px rgb(26 28 59 / 0.25);
+  --chart-1: #7254ea;
+  --chart-2: #a792f7;
+  --chart-3: #d6cbfc;
+  --chart-4: #3f2aa6;
+  --side-bg: #ffffff;
+  --nav-active-bg: #f0ebff;
+  --nav-active-ink: #3a2893;
+  --map-dot: #e2dafb;
+  --table-head: #faf8ff;
+  --row-live: #f4f0ff;
+  color-scheme: light;
+}
