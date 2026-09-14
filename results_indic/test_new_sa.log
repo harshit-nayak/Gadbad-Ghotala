@@ -1,0 +1,20 @@
+=== Sanskrit (sa) ===
+Collecting 250 real clips from surajp/shrutilipi_sanskrit ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  [real] shard train-00000-of-00016-ea3baf304efe85e3.parquet: 250/250 collected so far
+Collecting 250 fake clips from vdivyasharma/IndicSynth/Sanskrit ...
+  [fake] shard train-00000-of-00396.parquet: 250/250 collected so far
+collected: real=250 fake=250
+wrote C:\Users\ATHARV\SIH_data\indic_df\manifest_saNth.tsv  (500 clips)
+common - <dataclasses._MISSING_TYPE object at 0x000002B5F1E1D7F0>
+2026-09-13 21:15:35 | INFO | fairseq.tasks.text_to_speech | Please install tensorboardX: pip install tensorboardX
+
+own-threshold EER: 4.80%
+
+=== sa [NEVER TRAINED, fixed threshold -1.0212] ===  (n=500, real=250, fake=250)
+                    pred. real   pred. fake
+  actual real            243            7
+  actual fake             12          238
+  accuracy 96.20%  precision 95.29%  recall 97.20%  F1 96.24  own-threshold EER 4.80%
+
+-> appended to results_indic/eval_new_languages_all.csv

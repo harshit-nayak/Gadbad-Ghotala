@@ -1,0 +1,196 @@
+common - <dataclasses._MISSING_TYPE object at 0x00000196B6261160>
+2026-09-13 15:13:23 | INFO | fairseq.tasks.text_to_speech | Please install tensorboardX: pip install tensorboardX
+training conformer head: 1.79 M params
+train 20535  dev 4770
+  ep 1 batch 25/320  loss 0.8495  3015 ms/batch
+  ep 1 batch 50/320  loss 0.7026  3001 ms/batch
+  ep 1 batch 75/320  loss 0.5873  3004 ms/batch
+  ep 1 batch 100/320  loss 0.4975  3003 ms/batch
+  ep 1 batch 125/320  loss 0.4337  3000 ms/batch
+  ep 1 batch 150/320  loss 0.3869  2999 ms/batch
+  ep 1 batch 175/320  loss 0.3519  2997 ms/batch
+  ep 1 batch 200/320  loss 0.3219  2996 ms/batch
+  ep 1 batch 225/320  loss 0.2961  2995 ms/batch
+  ep 1 batch 250/320  loss 0.2758  2995 ms/batch
+  ep 1 batch 275/320  loss 0.2595  2994 ms/batch
+  ep 1 batch 300/320  loss 0.2443  2994 ms/batch
+ep  1  loss 0.2344  dev EER 2.29%  (lang:bn=2.00 lang:gu=2.15 lang:hi=0.76 lang:ml=0.32 lang:ta=1.48 codec:clean=2.26 codec:whatsapp=2.43)  1088s
+  ep 2 batch 25/320  loss 0.0684  3036 ms/batch
+  ep 2 batch 50/320  loss 0.0705  3005 ms/batch
+  ep 2 batch 75/320  loss 0.0644  2995 ms/batch
+  ep 2 batch 100/320  loss 0.0595  2989 ms/batch
+  ep 2 batch 125/320  loss 0.0582  2985 ms/batch
+  ep 2 batch 150/320  loss 0.0581  2983 ms/batch
+  ep 2 batch 175/320  loss 0.0577  2982 ms/batch
+  ep 2 batch 200/320  loss 0.0569  2982 ms/batch
+  ep 2 batch 225/320  loss 0.0558  2983 ms/batch
+  ep 2 batch 250/320  loss 0.0561  2982 ms/batch
+  ep 2 batch 275/320  loss 0.0542  2982 ms/batch
+  ep 2 batch 300/320  loss 0.0533  3002 ms/batch
+ep  2  loss 0.0528  dev EER 0.88%  (lang:bn=0.86 lang:gu=0.42 lang:hi=0.76 lang:ml=0.16 lang:ta=0.00 codec:clean=0.75 codec:whatsapp=0.92)  1167s
+  ep 3 batch 25/320  loss 0.0422  3774 ms/batch
+  ep 3 batch 50/320  loss 0.0440  3762 ms/batch
+  ep 3 batch 75/320  loss 0.0406  3903 ms/batch
+  ep 3 batch 100/320  loss 0.0395  4156 ms/batch
+  ep 3 batch 125/320  loss 0.0426  4988 ms/batch
+  ep 3 batch 150/320  loss 0.0400  4876 ms/batch
+  ep 3 batch 175/320  loss 0.0377  4747 ms/batch
+  ep 3 batch 200/320  loss 0.0366  4557 ms/batch
+  ep 3 batch 225/320  loss 0.0354  4402 ms/batch
+  ep 3 batch 250/320  loss 0.0348  4272 ms/batch
+  ep 3 batch 275/320  loss 0.0338  4162 ms/batch
+  ep 3 batch 300/320  loss 0.0330  4072 ms/batch
+ep  3  loss 0.0337  dev EER 0.69%  (lang:bn=0.71 lang:gu=0.42 lang:hi=0.76 lang:ml=0.00 lang:ta=0.00 codec:clean=0.55 codec:whatsapp=0.92)  1447s
+  ep 4 batch 25/320  loss 0.0213  3082 ms/batch
+  ep 4 batch 50/320  loss 0.0238  3064 ms/batch
+  ep 4 batch 75/320  loss 0.0235  3580 ms/batch
+  ep 4 batch 100/320  loss 0.0273  3638 ms/batch
+  ep 4 batch 125/320  loss 0.0260  3868 ms/batch
+  ep 4 batch 150/320  loss 0.0263  3955 ms/batch
+  ep 4 batch 175/320  loss 0.0266  3899 ms/batch
+  ep 4 batch 200/320  loss 0.0262  3797 ms/batch
+  ep 4 batch 225/320  loss 0.0260  3719 ms/batch
+  ep 4 batch 250/320  loss 0.0252  3653 ms/batch
+  ep 4 batch 275/320  loss 0.0245  3600 ms/batch
+  ep 4 batch 300/320  loss 0.0242  3565 ms/batch
+ep  4  loss 0.0239  dev EER 0.88%  (lang:bn=0.71 lang:gu=0.00 lang:hi=1.52 lang:ml=0.00 lang:ta=0.00 codec:clean=0.55 codec:whatsapp=1.13)  1294s
+  ep 5 batch 25/320  loss 0.0226  3193 ms/batch
+  ep 5 batch 50/320  loss 0.0244  3510 ms/batch
+  ep 5 batch 75/320  loss 0.0245  3611 ms/batch
+  ep 5 batch 100/320  loss 0.0223  3794 ms/batch
+  ep 5 batch 125/320  loss 0.0225  3885 ms/batch
+  ep 5 batch 150/320  loss 0.0199  4081 ms/batch
+  ep 5 batch 175/320  loss 0.0201  4027 ms/batch
+  ep 5 batch 200/320  loss 0.0201  4013 ms/batch
+  ep 5 batch 225/320  loss 0.0217  4016 ms/batch
+  ep 5 batch 250/320  loss 0.0207  4023 ms/batch
+  ep 5 batch 275/320  loss 0.0205  4032 ms/batch
+  ep 5 batch 300/320  loss 0.0207  4074 ms/batch
+ep  5  loss 0.0216  dev EER 0.29%  (lang:bn=0.18 lang:gu=0.42 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.29 codec:whatsapp=0.29)  1514s
+  ep 6 batch 25/320  loss 0.0165  3671 ms/batch
+  ep 6 batch 50/320  loss 0.0112  3402 ms/batch
+  ep 6 batch 75/320  loss 0.0094  3291 ms/batch
+  ep 6 batch 100/320  loss 0.0114  3364 ms/batch
+  ep 6 batch 125/320  loss 0.0143  3425 ms/batch
+  ep 6 batch 150/320  loss 0.0144  3485 ms/batch
+  ep 6 batch 175/320  loss 0.0159  3424 ms/batch
+  ep 6 batch 200/320  loss 0.0158  3378 ms/batch
+  ep 6 batch 225/320  loss 0.0158  3342 ms/batch
+  ep 6 batch 250/320  loss 0.0156  3315 ms/batch
+  ep 6 batch 275/320  loss 0.0149  3291 ms/batch
+  ep 6 batch 300/320  loss 0.0145  3271 ms/batch
+ep  6  loss 0.0143  dev EER 0.38%  (lang:bn=0.39 lang:gu=0.00 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.38 codec:whatsapp=0.38)  1231s
+  ep 7 batch 25/320  loss 0.0112  3054 ms/batch
+  ep 7 batch 50/320  loss 0.0154  3056 ms/batch
+  ep 7 batch 75/320  loss 0.0150  3051 ms/batch
+  ep 7 batch 100/320  loss 0.0163  3051 ms/batch
+  ep 7 batch 125/320  loss 0.0152  3050 ms/batch
+  ep 7 batch 150/320  loss 0.0146  3050 ms/batch
+  ep 7 batch 175/320  loss 0.0150  3050 ms/batch
+  ep 7 batch 200/320  loss 0.0173  3050 ms/batch
+  ep 7 batch 225/320  loss 0.0175  3050 ms/batch
+  ep 7 batch 250/320  loss 0.0166  3050 ms/batch
+  ep 7 batch 275/320  loss 0.0164  3048 ms/batch
+  ep 7 batch 300/320  loss 0.0159  3047 ms/batch
+ep  7  loss 0.0154  dev EER 0.38%  (lang:bn=0.36 lang:gu=0.00 lang:hi=0.76 lang:ml=0.16 lang:ta=0.00 codec:clean=0.38 codec:whatsapp=0.38)  1246s
+  ep 8 batch 25/320  loss 0.0047  3648 ms/batch
+  ep 8 batch 50/320  loss 0.0079  3593 ms/batch
+  ep 8 batch 75/320  loss 0.0098  3491 ms/batch
+  ep 8 batch 100/320  loss 0.0094  3377 ms/batch
+  ep 8 batch 125/320  loss 0.0100  3310 ms/batch
+  ep 8 batch 150/320  loss 0.0101  3264 ms/batch
+  ep 8 batch 175/320  loss 0.0100  3351 ms/batch
+  ep 8 batch 200/320  loss 0.0111  3910 ms/batch
+  ep 8 batch 225/320  loss 0.0116  4338 ms/batch
+  ep 8 batch 250/320  loss 0.0112  4534 ms/batch
+  ep 8 batch 275/320  loss 0.0106  4668 ms/batch
+  ep 8 batch 300/320  loss 0.0107  4622 ms/batch
+ep  8  loss 0.0111  dev EER 0.33%  (lang:bn=0.36 lang:gu=0.00 lang:hi=0.48 lang:ml=0.00 lang:ta=0.09 codec:clean=0.38 codec:whatsapp=0.29)  1637s
+  ep 9 batch 25/320  loss 0.0067  3567 ms/batch
+  ep 9 batch 50/320  loss 0.0088  3305 ms/batch
+  ep 9 batch 75/320  loss 0.0111  3222 ms/batch
+  ep 9 batch 100/320  loss 0.0115  3172 ms/batch
+  ep 9 batch 125/320  loss 0.0131  3161 ms/batch
+  ep 9 batch 150/320  loss 0.0119  3145 ms/batch
+  ep 9 batch 175/320  loss 0.0121  3133 ms/batch
+  ep 9 batch 200/320  loss 0.0114  3142 ms/batch
+  ep 9 batch 225/320  loss 0.0117  3138 ms/batch
+  ep 9 batch 250/320  loss 0.0115  3127 ms/batch
+  ep 9 batch 275/320  loss 0.0126  3153 ms/batch
+  ep 9 batch 300/320  loss 0.0123  3138 ms/batch
+ep  9  loss 0.0120  dev EER 0.27%  (lang:bn=0.36 lang:gu=0.42 lang:hi=0.28 lang:ml=0.00 lang:ta=0.09 codec:clean=0.21 codec:whatsapp=0.29)  1175s
+  ep 10 batch 25/320  loss 0.0101  3126 ms/batch
+  ep 10 batch 50/320  loss 0.0077  3050 ms/batch
+  ep 10 batch 75/320  loss 0.0089  3148 ms/batch
+  ep 10 batch 100/320  loss 0.0076  3107 ms/batch
+  ep 10 batch 125/320  loss 0.0067  3085 ms/batch
+  ep 10 batch 150/320  loss 0.0061  3288 ms/batch
+  ep 10 batch 175/320  loss 0.0057  3247 ms/batch
+  ep 10 batch 200/320  loss 0.0062  3214 ms/batch
+  ep 10 batch 225/320  loss 0.0057  3189 ms/batch
+  ep 10 batch 250/320  loss 0.0069  3200 ms/batch
+  ep 10 batch 275/320  loss 0.0073  3293 ms/batch
+  ep 10 batch 300/320  loss 0.0073  3359 ms/batch
+ep 10  loss 0.0071  dev EER 0.15%  (lang:bn=0.15 lang:gu=0.00 lang:hi=0.48 lang:ml=0.00 lang:ta=0.00 codec:clean=0.17 codec:whatsapp=0.17)  1318s
+  ep 11 batch 25/320  loss 0.0077  4171 ms/batch
+  ep 11 batch 50/320  loss 0.0092  3976 ms/batch
+  ep 11 batch 75/320  loss 0.0069  4155 ms/batch
+  ep 11 batch 100/320  loss 0.0066  4061 ms/batch
+  ep 11 batch 125/320  loss 0.0058  3873 ms/batch
+  ep 11 batch 150/320  loss 0.0054  3725 ms/batch
+  ep 11 batch 175/320  loss 0.0067  3620 ms/batch
+  ep 11 batch 200/320  loss 0.0066  3540 ms/batch
+  ep 11 batch 225/320  loss 0.0066  3478 ms/batch
+  ep 11 batch 250/320  loss 0.0064  3463 ms/batch
+  ep 11 batch 275/320  loss 0.0064  3549 ms/batch
+  ep 11 batch 300/320  loss 0.0064  3689 ms/batch
+ep 11  loss 0.0063  dev EER 0.10%  (lang:bn=0.03 lang:gu=0.00 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.08 codec:whatsapp=0.17)  1480s
+  ep 12 batch 25/320  loss 0.0046  4991 ms/batch
+  ep 12 batch 50/320  loss 0.0043  4617 ms/batch
+  ep 12 batch 75/320  loss 0.0040  4511 ms/batch
+  ep 12 batch 100/320  loss 0.0032  4205 ms/batch
+  ep 12 batch 125/320  loss 0.0033  3998 ms/batch
+  ep 12 batch 150/320  loss 0.0035  3842 ms/batch
+  ep 12 batch 175/320  loss 0.0041  3732 ms/batch
+  ep 12 batch 200/320  loss 0.0051  3645 ms/batch
+  ep 12 batch 225/320  loss 0.0053  3577 ms/batch
+  ep 12 batch 250/320  loss 0.0053  3524 ms/batch
+  ep 12 batch 275/320  loss 0.0057  3479 ms/batch
+  ep 12 batch 300/320  loss 0.0063  3443 ms/batch
+ep 12  loss 0.0065  dev EER 0.15%  (lang:bn=0.18 lang:gu=0.00 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.17 codec:whatsapp=0.17)  1312s
+  ep 13 batch 25/320  loss 0.0037  3516 ms/batch
+  ep 13 batch 50/320  loss 0.0057  3494 ms/batch
+  ep 13 batch 75/320  loss 0.0050  3529 ms/batch
+  ep 13 batch 100/320  loss 0.0045  3406 ms/batch
+  ep 13 batch 125/320  loss 0.0042  3336 ms/batch
+  ep 13 batch 150/320  loss 0.0046  3287 ms/batch
+  ep 13 batch 175/320  loss 0.0051  3256 ms/batch
+  ep 13 batch 200/320  loss 0.0046  3231 ms/batch
+  ep 13 batch 225/320  loss 0.0051  3209 ms/batch
+  ep 13 batch 250/320  loss 0.0050  3195 ms/batch
+  ep 13 batch 275/320  loss 0.0051  3180 ms/batch
+  ep 13 batch 300/320  loss 0.0050  3168 ms/batch
+ep 13  loss 0.0049  dev EER 0.10%  (lang:bn=0.15 lang:gu=0.00 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.08 codec:whatsapp=0.17)  1216s
+  ep 14 batch 25/320  loss 0.0050  3069 ms/batch
+  ep 14 batch 50/320  loss 0.0036  3062 ms/batch
+  ep 14 batch 75/320  loss 0.0029  3068 ms/batch
+  ep 14 batch 100/320  loss 0.0037  3065 ms/batch
+  ep 14 batch 125/320  loss 0.0060  3088 ms/batch
+  ep 14 batch 150/320  loss 0.0064  3194 ms/batch
+  ep 14 batch 175/320  loss 0.0058  3283 ms/batch
+  ep 14 batch 200/320  loss 0.0054  3345 ms/batch
+  ep 14 batch 225/320  loss 0.0054  3394 ms/batch
+  ep 14 batch 250/320  loss 0.0051  3485 ms/batch
+  ep 14 batch 275/320  loss 0.0057  3525 ms/batch
+  ep 14 batch 300/320  loss 0.0056  3511 ms/batch
+ep 14  loss 0.0053  dev EER 0.19%  (lang:bn=0.33 lang:gu=0.00 lang:hi=0.28 lang:ml=0.00 lang:ta=0.00 codec:clean=0.17 codec:whatsapp=0.17)  1436s
+  ep 15 batch 25/320  loss 0.0067  3911 ms/batch
+  ep 15 batch 50/320  loss 0.0065  3943 ms/batch
+  ep 15 batch 75/320  loss 0.0053  3972 ms/batch
+  ep 15 batch 100/320  loss 0.0044  4047 ms/batch
+  ep 15 batch 125/320  loss 0.0049  4034 ms/batch
+  ep 15 batch 150/320  loss 0.0048  4107 ms/batch
+  ep 15 batch 175/320  loss 0.0046  4262 ms/batch
+  ep 15 batch 200/320  loss 0.0047  4468 ms/batch
+  ep 15 batch 225/320  loss 0.0044  4640 ms/batch
+  ep 15 batch 250/320  loss 0.0054  4603 ms/batch

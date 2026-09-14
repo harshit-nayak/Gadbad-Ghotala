@@ -166,14 +166,15 @@ class MixerModel(nn.Module):
         r = (res + orig) if res is not None else orig
         return self.norm_f(r.to(self.norm_f.weight.dtype))
 
-    def forward(self, x, inference_params=None):
+    def forward(self, x, inference_params=None, return_embedding=False):
         orig = self.dropout(x)
         if not self.if_bidirectional:
             h, res = orig, None
             for lyr in self.forward_layers:
                 h, res = lyr(h, res, inference_params)
             h = self._norm(h, res, orig)
-            return self.classifier(self.dropout(self._pool(self.f_attention_pool, h)))
+            emb = self.dropout(self._pool(self.f_attention_pool, h))
+            return (self.classifier(emb), emb) if return_embedding else self.classifier(emb)
         fh, fr = orig, None
         for lyr in self.forward_layers:
             fh, fr = lyr(fh, fr, inference_params)
@@ -184,7 +185,12 @@ class MixerModel(nn.Module):
         bh = self._norm(bh, br, orig)
         fp = self._pool(self.f_attention_pool, fh)
         bp = self._pool(self.b_attention_pool, bh)
-        return self.classifier(self.dropout(self.LL(torch.cat([fp, bp], dim=1))))
+        # emb = the pooled 144-dim representation just before the final classifier -
+        # used by finetune_language_agnostic.py to attach a gradient-reversed
+        # language-discriminator branch. Existing callers are unaffected: with
+        # return_embedding=False (the default) this returns exactly what it always did.
+        emb = self.dropout(self.LL(torch.cat([fp, bp], dim=1)))
+        return (self.classifier(emb), emb) if return_embedding else self.classifier(emb)
 
 
 # ============================================================

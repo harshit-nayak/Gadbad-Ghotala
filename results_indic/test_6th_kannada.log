@@ -1,0 +1,21 @@
+Collecting 250 real Kannada clips from PharynxAI/IndicVoices-kannada-10000 ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  [real] shard train-00000-of-00003.parquet: 250/250 collected so far
+Collecting 250 fake Kannada clips from vdivyasharma/IndicSynth/Kannada ...
+  [fake] shard train-00000-of-00091.parquet: 250/250 collected so far
+collected: real=250 fake=250
+wrote C:\Users\ATHARV\SIH_data\indic_df\manifest_kn6th.tsv  (500 clips)
+common - <dataclasses._MISSING_TYPE object at 0x0000019AA1CF97F0>
+2026-09-13 20:56:48 | INFO | fairseq.tasks.text_to_speech | Please install tensorboardX: pip install tensorboardX
+model: model_indic_ft_5lang.safetensors
+
+=== KANNADA - genuinely never seen in training/dev/test ===
+own-threshold EER: 0.40%
+
+=== kn [NEVER TRAINED, fixed threshold -1.0212] ===  (n=500, real=250, fake=250)
+                    pred. real   pred. fake
+  actual real            248            2
+  actual fake              1          249
+  accuracy 99.40%  precision 99.60%  recall 99.20%  F1 99.40  own-threshold EER 0.40%
+
+-> results_indic/eval_6th_language_kn.csv

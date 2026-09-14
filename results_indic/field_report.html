@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>XLSR-Mamba Field Report</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -114,7 +115,7 @@
 
   /* ---------- headline stat strip ---------- */
   .headline-grid{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1px;
     background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden;
     margin-top:8px;
   }
@@ -238,9 +239,9 @@
 <div class="wrap">
 
   <header class="cover">
-    <div class="eyebrow"><span class="dot"></span>TECHNICAL REPORT &nbsp;·&nbsp; VOICE SPOOF DETECTION &nbsp;·&nbsp; 11 SEP 2026</div>
+    <div class="eyebrow"><span class="dot"></span>TECHNICAL REPORT &nbsp;·&nbsp; VOICE SPOOF DETECTION &nbsp;·&nbsp; UPDATED 13 SEP 2026</div>
     <h1 class="title">XLSR&#8209;Mamba Field Report</h1>
-    <p class="subtitle">Benchmarking a dual-column Mamba spoof detector on ASVspoof5, then fine-tuning it to catch Hindi, Bengali and Tamil voice deepfakes that survive WhatsApp-grade compression — and what that fine-tune cost the model's original skill.</p>
+    <p class="subtitle">Benchmarking a dual-column Mamba spoof detector on ASVspoof5, fine-tuning it on Hindi/Bengali/Tamil deepfakes that survive WhatsApp-grade compression, and then testing whether domain-adversarial training can make that skill hold up on languages it never saw a single training clip from.</p>
     <div class="meta-row">
       <span><b>Model</b> XLSR-Mamba · 319.3M params</span>
       <span><b>Hardware</b> RTX 5060 Laptop (8GB) · PyTorch 2.10 / cu128</span>
@@ -263,6 +264,11 @@
         <div class="value-row"><span class="value critical">21.28%</span></div>
         <div class="foot">up from 2.77% &mdash; catastrophic forgetting, see &sect;7</div>
       </div>
+      <div class="stat">
+        <div class="label">Unseen-language test (ml+gu), plain &rarr; adversarial</div>
+        <div class="value-row"><span class="value" style="color:var(--ink-soft)">12.38%</span><span class="arrow">&rarr;</span><span class="value" style="color:var(--ink-soft)">12.50%</span></div>
+        <div class="foot">domain-adversarial training: a wash, not a win &mdash; see &sect;10</div>
+      </div>
     </div>
   </header>
 
@@ -276,8 +282,14 @@
       <li><span class="n">05</span><a href="#sec-method">Fine-tuning method</a><span class="pg">1.79M-param head</span></li>
       <li><span class="n">06</span><a href="#sec-results">Results on Indic deepfakes</a><span class="pg">EER 0.31%</span></li>
       <li><span class="n">07</span><a href="#sec-forgetting">The forgetting cost</a><span class="pg">EER 21.28%</span></li>
-      <li><span class="n">08</span><a href="#sec-limits">Limitations &amp; honest caveats</a></li>
-      <li><span class="n">09</span><a href="#sec-manifest">Reproducing this report</a><span class="pg">files &amp; commands</span></li>
+      <li><span class="n">08</span><a href="#sec-pivot">Toward a language-agnostic detector</a><span class="pg">why more languages was the wrong lever</span></li>
+      <li><span class="n">09</span><a href="#sec-dann">Domain-adversarial training</a><span class="pg">gradient reversal, dev EER 0.52%</span></li>
+      <li><span class="n">10</span><a href="#sec-crosslingual">Does it actually generalize?</a><span class="pg">Malayalam/Gujarati, unseen-language test</span></li>
+      <li><span class="n">11</span><a href="#sec-allconfusion">Confusion matrices at one fixed threshold</a><span class="pg">all 5 languages · Malayalam breaks at 65.37% acc</span></li>
+      <li><span class="n">12</span><a href="#sec-fix">The fix: training on all 5 languages</a><span class="pg">Malayalam EER 31.64% &rarr; 0.00%</span></li>
+      <li><span class="n">13</span><a href="#sec-zeroshot5">Zero-shot test: 5 more never-seen languages</a><span class="pg">kn/mr/pa/te/sa · 98.44% mean accuracy</span></li>
+      <li><span class="n">14</span><a href="#sec-limits">Limitations &amp; honest caveats</a></li>
+      <li><span class="n">15</span><a href="#sec-manifest">Reproducing this report</a><span class="pg">files &amp; commands</span></li>
     </ol>
   </nav>
 
@@ -566,8 +578,454 @@
   </section>
 
   <!-- ============================================================ 08 -->
+  <section id="sec-pivot">
+    <div class="sec-head"><span class="num">08</span><h2>Toward a language-agnostic detector</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">The obvious next move after &sect;6 is "add more languages." That turned out to be the wrong lever to pull.</p>
+
+    <p>Hindi/Bengali/Tamil worked because one dataset (<code class="mono">IndicVoices-R</code>) happens to have ungated, per-language real-speech mirrors for exactly those three. Extending to Gujarati, Kannada, Malayalam and Marathi meant hunting down four more independent, differently-shaped real-speech sources — different audio-column names, different encodings, one storing raw arrays instead of encoded bytes — and streaming tens of gigabytes through HuggingFace's anonymous rate limit. The build stalled repeatedly on dead network connections, and its resume mechanism made every restart worse: it re-streamed and discarded every row already seen before making new progress, so a bucket with 75,000 rows already consumed could cost <em>hours</em> to simply get back to where it was. A shard-level rewrite fixed the resume cost, but the fundamental problem remained: this approach spends enormous effort for one language at a time.</p>
+
+    <div class="callout info"><span class="icon"></span><p><b>The reframe:</b> instead of finding training data in every language a deepfake might arrive in, train the <em>existing</em> hi/bn/ta corpus so that what it learns doesn't depend on language in the first place. If that works, the model should hold up on languages it has never seen a single training clip from — no new data collection required.</p></div>
+  </section>
+
+  <!-- ============================================================ 09 -->
+  <section id="sec-dann">
+    <div class="sec-head"><span class="num">09</span><h2>Domain-adversarial training</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">Ganin &amp; Lempitsky's gradient-reversal technique (2016), applied here to strip language identity out of the shared embedding while keeping it predictive of bonafide-vs-spoof.</p>
+
+    <h3>The architecture gains one branch</h3>
+    <figure>
+      <div class="imgwrap" style="background:var(--surface); padding:20px 10px;">
+        <svg viewBox="0 0 760 400" width="100%" role="img" aria-label="Architecture diagram: waveform through frozen backbone and front end to a shared 144-dimensional embedding, which forks into a trainable classifier producing bonafide/spoof, and a gradient-reversal layer feeding a trainable language discriminator producing predicted language">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"/>
+            </marker>
+            <marker id="arrowGood" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--good)"/>
+            </marker>
+            <marker id="arrowCrit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--critical)"/>
+            </marker>
+          </defs>
+          <g font-family="IBM Plex Sans">
+          <!-- frozen stack -->
+          <rect x="270" y="12" width="220" height="36" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="380" y="35" text-anchor="middle" font-size="13" fill="var(--ink)">Waveform (16kHz)</text>
+          <line x1="380" y1="48" x2="380" y2="70" stroke="var(--ink-faint)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <rect x="180" y="70" width="400" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="380" y="94" text-anchor="middle" font-size="13" fill="var(--ink)">XLSR-2.0 backbone &mdash; frozen, 317.5M params</text>
+          <line x1="380" y1="110" x2="380" y2="132" stroke="var(--ink-faint)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <rect x="200" y="132" width="360" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="380" y="156" text-anchor="middle" font-size="13" fill="var(--ink)">Front end: Linear &rarr; BatchNorm &rarr; SELU &mdash; frozen</text>
+          <line x1="380" y1="172" x2="380" y2="194" stroke="var(--ink-faint)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- shared embedding, the fork point -->
+          <rect x="250" y="194" width="260" height="42" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="380" y="220" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--accent-ink)">Shared embedding (144-dim)</text>
+
+          <!-- fork -->
+          <path d="M310,236 C 230,260 150,260 150,278" fill="none" stroke="var(--good)" stroke-width="1.5" marker-end="url(#arrowGood)"/>
+          <path d="M450,236 C 530,260 610,260 610,278" fill="none" stroke="var(--critical)" stroke-width="1.5" marker-end="url(#arrowCrit)"/>
+
+          <!-- left branch: classifier -->
+          <rect x="40" y="278" width="220" height="38" rx="8" fill="var(--good-soft)" stroke="var(--good)"/>
+          <text x="150" y="302" text-anchor="middle" font-size="12.5" fill="var(--ink)">Classifier &mdash; trainable</text>
+          <line x1="150" y1="316" x2="150" y2="336" stroke="var(--good)" stroke-width="1.5" marker-end="url(#arrowGood)"/>
+          <text x="150" y="356" text-anchor="middle" font-size="13" font-weight="600" fill="var(--good)">bonafide / spoof</text>
+
+          <!-- right branch: GRL + language head -->
+          <rect x="500" y="278" width="220" height="38" rx="8" fill="var(--critical-soft)" stroke="var(--critical)"/>
+          <text x="610" y="298" text-anchor="middle" font-size="11.5" fill="var(--ink)">Gradient Reversal Layer</text>
+          <text x="610" y="311" text-anchor="middle" font-size="10" fill="var(--ink-faint)">forward = identity &middot; backward = &minus;&lambda;&middot;grad</text>
+          <line x1="610" y1="316" x2="610" y2="336" stroke="var(--critical)" stroke-width="1.5" marker-end="url(#arrowCrit)"/>
+
+          <rect x="500" y="336" width="220" height="38" rx="8" fill="var(--critical-soft)" stroke="var(--critical)"/>
+          <text x="610" y="360" text-anchor="middle" font-size="12.5" fill="var(--ink)">Language discriminator &mdash; trainable</text>
+          <text x="610" y="386" text-anchor="middle" font-size="12" font-weight="600" fill="var(--critical)">predicted language (hi/bn/ta)</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>The green path trains normally: shared embedding &rarr; classifier &rarr; bonafide/spoof. The red path trains a language discriminator on the <em>same</em> embedding, but every gradient it sends backward through the Gradient Reversal Layer has its sign flipped &mdash; so improving the discriminator's accuracy actively pushes the shared embedding to become <em>less</em> informative about language.</figcaption>
+    </figure>
+
+    <h3>Training setup</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Language discriminator</td><td>Linear(144&rarr;64) &rarr; ReLU &rarr; Linear(64&rarr;3), 9,475 params</td></tr>
+          <tr><td>Discriminator classes</td><td>hi / bn / ta (the only languages in the training data)</td></tr>
+          <tr><td>&lambda; schedule</td><td>Ganin&ndash;Lempitsky ramp, 0 &rarr; 0.3 over training (avoids destabilizing the head before it learns anything)</td></tr>
+          <tr><td>Combined loss</td><td>spoof cross-entropy + language cross-entropy (GRL supplies the sign flip &mdash; both terms are simply added)</td></tr>
+          <tr><td>Everything else</td><td>identical to &sect;5: same corpus, same crop, same optimizer, same early stopping on dev EER</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Training curves &mdash; plain fine-tune vs. adversarial fine-tune</h3>
+    <div class="card curve-card">
+      <svg viewBox="0 0 760 220" width="100%" style="overflow:visible" role="img" aria-label="Line chart comparing dev EER percentage across epochs for the plain fine-tune (4 epochs) and the domain-adversarial fine-tune (11 epochs)">
+        <g font-family="IBM Plex Mono" font-size="10.5">
+          <g stroke="var(--line-soft)" stroke-width="1">
+            <line x1="46" y1="20" x2="740" y2="20"/>
+            <line x1="46" y1="76" x2="740" y2="76"/>
+            <line x1="46" y1="132" x2="740" y2="132"/>
+          </g>
+          <line x1="46" y1="188" x2="740" y2="188" stroke="var(--ink-faint)" stroke-width="1.2"/>
+          <text x="38" y="24" text-anchor="end" fill="var(--ink-faint)">1.6%</text>
+          <text x="38" y="80" text-anchor="end" fill="var(--ink-faint)">1.0%</text>
+          <text x="38" y="136" text-anchor="end" fill="var(--ink-faint)">0.5%</text>
+          <text x="38" y="192" text-anchor="end" fill="var(--ink-faint)">0%</text>
+          <text x="80" y="206" text-anchor="middle" fill="var(--ink-faint)">ep1</text>
+          <text x="210" y="206" text-anchor="middle" fill="var(--ink-faint)">ep3</text>
+          <text x="340" y="206" text-anchor="middle" fill="var(--ink-faint)">ep5</text>
+          <text x="470" y="206" text-anchor="middle" fill="var(--ink-faint)">ep7</text>
+          <text x="600" y="206" text-anchor="middle" fill="var(--ink-faint)">ep9</text>
+          <text x="730" y="206" text-anchor="middle" fill="var(--ink-faint)">ep11</text>
+        </g>
+        <!-- plain fine-tune, 4 epochs, dashed -->
+        <polyline points="80,28.2 145,110.4 210,110.4 275,121.9" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="275" cy="121.9" r="3.5" fill="var(--ink-faint)"/>
+        <!-- adversarial fine-tune, 11 epochs -->
+        <polyline points="80,55.6 145,55.6 210,83.0 275,121.9 340,121.9 405,121.9 470,133.2 535,94.3 600,121.9 665,121.9 730,133.2" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="470" cy="133.2" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5"/>
+        <line x1="470" y1="12" x2="470" y2="196" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3" opacity=".4"/>
+      </svg>
+      <div class="curve-legend">
+        <span><i style="background:var(--ink-faint); background-image:repeating-linear-gradient(90deg,var(--ink-faint) 0 4px,transparent 4px 7px)"></i>Plain fine-tune (&sect;5), stopped at 4 epochs</span>
+        <span><i style="background:var(--accent)"></i>Adversarial fine-tune, best at epoch 7 (0.52%)</span>
+      </div>
+    </div>
+    <p style="font-size:13px; color:var(--ink-faint); margin-top:10px;">The adversarial objective costs essentially nothing on the main task &mdash; its best dev EER (0.52%) is <em>better</em> than the plain fine-tune's best (0.63%). Early-stopped after epoch 11 (4 epochs without improvement).</p>
+
+    <h3>Is language actually becoming harder to predict?</h3>
+    <div class="card curve-card">
+      <svg viewBox="0 0 760 220" width="100%" style="overflow:visible" role="img" aria-label="Line chart of the language discriminator's dev-set accuracy across the 11 adversarial training epochs, with a reference line at the 33.3 percent chance level for 3-way classification">
+        <g font-family="IBM Plex Mono" font-size="10.5">
+          <g stroke="var(--line-soft)" stroke-width="1">
+            <line x1="46" y1="20" x2="740" y2="20"/>
+            <line x1="46" y1="76" x2="740" y2="76"/>
+            <line x1="46" y1="132" x2="740" y2="132"/>
+          </g>
+          <line x1="46" y1="188" x2="740" y2="188" stroke="var(--ink-faint)" stroke-width="1.2"/>
+          <text x="38" y="24" text-anchor="end" fill="var(--ink-faint)">65%</text>
+          <text x="38" y="80" text-anchor="end" fill="var(--ink-faint)">43%</text>
+          <text x="38" y="136" text-anchor="end" fill="var(--ink-faint)">22%</text>
+          <text x="38" y="192" text-anchor="end" fill="var(--ink-faint)">0%</text>
+          <text x="80" y="206" text-anchor="middle" fill="var(--ink-faint)">ep1</text>
+          <text x="210" y="206" text-anchor="middle" fill="var(--ink-faint)">ep3</text>
+          <text x="340" y="206" text-anchor="middle" fill="var(--ink-faint)">ep5</text>
+          <text x="470" y="206" text-anchor="middle" fill="var(--ink-faint)">ep7</text>
+          <text x="600" y="206" text-anchor="middle" fill="var(--ink-faint)">ep9</text>
+          <text x="730" y="206" text-anchor="middle" fill="var(--ink-faint)">ep11</text>
+        </g>
+        <line x1="46" y1="101.9" x2="740" y2="101.9" stroke="var(--warning)" stroke-width="1.3" stroke-dasharray="5 4"/>
+        <text x="744" y="105" font-family="IBM Plex Mono" font-size="10.5" fill="var(--warning)">chance (33.3%)</text>
+        <polyline points="80,47.8 145,53.8 210,55.6 275,40.3 340,52.8 405,48.3 470,73.8 535,61.9 600,46.7 665,48.2 730,48.0" fill="none" stroke="var(--lang-bn)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="470" cy="73.8" r="4.5" fill="var(--lang-bn)" stroke="var(--surface)" stroke-width="1.5"/>
+      </svg>
+      <div class="curve-legend">
+        <span><i style="background:var(--lang-bn)"></i>Dev-set language accuracy (chance = 33.3% for 3 classes)</span>
+      </div>
+    </div>
+    <div class="callout warn"><span class="icon"></span><p><b>Read this trend honestly:</b> it dips to its lowest point (44.2%, closest to chance) at epoch 7 &mdash; the same epoch that also has the best spoof-detection EER &mdash; but it does not monotonically converge to 33.3%. With only 1,904 dev clips across 3 languages, this curve is noisy, and &lambda;'s 0.3 ceiling is a deliberately conservative choice that trades a stronger invariance guarantee for training stability. It is suppressed, not eliminated.</p></div>
+  </section>
+
+  <!-- ============================================================ 10 -->
+  <section id="sec-crosslingual">
+    <div class="sec-head"><span class="num">10</span><h2>Does it actually generalize?</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">Dev-set language accuracy on hi/bn/ta is a proxy. The real test: score both checkpoints on Malayalam and Gujarati clips &mdash; languages <b>neither</b> model has trained on a single example of.</p>
+
+    <p>The data exists only because of &sect;8's abandoned expansion: partial IndicVoices-R/IndicSynth downloads for Malayalam (asr-malayalam/indicvoices-v1a) and Gujarati (PharynxAI) were already sitting on disk, collected but never used for training either checkpoint. That makes them a genuine held-out-language test, not just a held-out-speaker one.</p>
+
+    <div id="crosslingual-result">    <h3>EER on languages neither model has ever seen</h3>
+    <div class="barchart" style="gap:20px;">
+      <div>
+        <div style="font-size:12px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;">Overall (Malayalam + Gujarati, n=3,200)</div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px;">
+          <div class="name"><span class="swatch" style="background:var(--ink-faint)"></span>Plain (&sect;5)</div>
+          <div class="track"><div class="fill" style="width:24.75%; background:var(--ink-faint)"></div></div>
+          <div class="val">12.38%</div>
+        </div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px; margin-top:6px;">
+          <div class="name"><span class="swatch" style="background:var(--accent)"></span>Adversarial</div>
+          <div class="track"><div class="fill" style="width:25.00%; background:var(--accent)"></div></div>
+          <div class="val">12.50%</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;"><span class="tag" style="color:var(--lang-hi); background:var(--lang-hi-soft);">GU</span> Gujarati (n=1,600)</div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px;">
+          <div class="name"><span class="swatch" style="background:var(--ink-faint)"></span>Plain (&sect;5)</div>
+          <div class="track"><div class="fill" style="width:8%; background:var(--ink-faint)"></div></div>
+          <div class="val">2.00%</div>
+        </div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px; margin-top:6px;">
+          <div class="name"><span class="swatch" style="background:var(--accent)"></span>Adversarial</div>
+          <div class="track"><div class="fill" style="width:5.5%; background:var(--accent)"></div></div>
+          <div class="val">1.38%</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;"><span class="tag" style="color:var(--lang-ta); background:var(--lang-ta-soft);">ML</span> Malayalam (n=1,600)</div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px;">
+          <div class="name"><span class="swatch" style="background:var(--ink-faint)"></span>Plain (&sect;5)</div>
+          <div class="track"><div class="fill" style="width:83.5%; background:var(--ink-faint)"></div></div>
+          <div class="val">20.88%</div>
+        </div>
+        <div class="barrow" style="grid-template-columns:100px 1fr 62px; margin-top:6px;">
+          <div class="name"><span class="swatch" style="background:var(--accent)"></span>Adversarial</div>
+          <div class="track"><div class="fill" style="width:82.0%; background:var(--accent)"></div></div>
+          <div class="val">20.50%</div>
+        </div>
+      </div>
+      <div class="chart-foot" style="padding-left:0; justify-content:flex-start; gap:24px;"><span>bars scaled to 25% max (top group) / 100% max (Malayalam)</span></div>
+    </div>
+
+    <div class="callout info"><span class="icon"></span><p><b>Honest verdict: a wash, not a win.</b> The adversarial model is marginally <em>better</em> on both individual unseen languages &mdash; Gujarati improves 2.00%&rarr;1.38%, Malayalam 20.88%&rarr;20.50% &mdash; but the combined overall EER is statistically indistinguishable (12.38% vs 12.50%, n=3,200). Domain-adversarial training did not deliver a dramatic cross-lingual improvement here. What it <em>did</em> do: cost nothing on the main hi/bn/ta task (&sect;9's dev EER was actually slightly better than the plain fine-tune), and it did not make cross-lingual performance worse. Given &lambda;'s conservative 0.3 ceiling and the small, noisy 3-language training signal (&sect;9), that's a plausible outcome rather than a failed one &mdash; but it is not the language-agnostic breakthrough the method aims for.</p></div>
+
+    <div class="callout warn"><span class="icon"></span><p><b>Malayalam is a much harder unseen language than Gujarati for both checkpoints</b> (~21% EER vs ~1.5&ndash;2%) &mdash; likely because Gujarati (Indo-Aryan, like Hindi) shares more phonetic and TTS-artifact structure with the hi/bn/ta training languages than Malayalam (Dravidian) does. That asymmetry is a more useful signal than the aggregate number: it suggests linguistic/typological distance from the training languages, not just "unseen vs. seen," predicts how well this approach transfers.</p></div>
+</div>
+  </section>
+
+  <!-- ============================================================ 11 -->
+  <section id="sec-allconfusion">
+    <div class="sec-head"><span class="num">11</span><h2>Confusion matrices at one fixed threshold</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">&sect;10 compared threshold-free EER on two unseen languages. This is the harder, more realistic version: pick <em>one</em> operating threshold from the trained languages, freeze it, then point the agnostic model at every language currently in the corpus &mdash; trained and unseen alike &mdash; exactly as a deployed system would run.</p>
+
+    <div class="callout info"><span class="icon"></span><p>Threshold fixed at <b class="mono">&minus;0.3281</b> &mdash; the EER point of the hi/bn/ta test set (in-domain EER 0.30%). Applied unchanged below to all 5 languages, including Gujarati and Malayalam, which the model never trained on.</p></div>
+
+    <div class="cm-grid">
+      <div class="cm-card" style="grid-column:1/-1; max-width:360px;">
+        <div class="cm-title"><span class="name">All 5 languages combined</span><span class="n">n=10,417</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">pred. real</div><div class="hd">pred. fake</div>
+          <div class="rowhd">actual real</div><div class="cm-cell ok"><span class="n">6,034</span></div><div class="cm-cell bad"><span class="n">156</span></div>
+          <div class="rowhd">actual fake</div><div class="cm-cell bad"><span class="n">1,259</span></div><div class="cm-cell ok"><span class="n">2,968</span></div>
+        </div>
+        <div class="cm-stats">
+          <div><span class="k">Accuracy</span><span class="v">86.42%</span></div>
+          <div><span class="k">Precision</span><span class="v">82.74%</span></div>
+          <div><span class="k">Recall</span><span class="v">97.48%</span></div>
+          <div><span class="k">EER</span><span class="v" style="color:var(--critical)">17.11%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Trained languages</h3>
+    <div class="cm-grid">
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag bn">BN</span> Bengali</span><span class="n">n=692</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">596</span></div><div class="cm-cell bad"><span class="n">0</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">0</span></div><div class="cm-cell ok"><span class="n">96</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">100.00%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.00%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag hi">HI</span> Hindi</span><span class="n">n=1,368</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">751</span></div><div class="cm-cell bad"><span class="n">1</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">1</span></div><div class="cm-cell ok"><span class="n">615</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">99.85%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.15%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag ta">TA</span> Tamil</span><span class="n">n=982</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">699</span></div><div class="cm-cell bad"><span class="n">5</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">2</span></div><div class="cm-cell ok"><span class="n">276</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">99.29%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.71%</span></div></div>
+      </div>
+    </div>
+
+    <h3>Unseen languages &mdash; never trained on</h3>
+    <div class="cm-grid">
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-hi)">GU &nbsp;Gujarati</span><span class="n">n=3,529</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">2,051</span></div><div class="cm-cell bad"><span class="n">70</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">4</span></div><div class="cm-cell ok"><span class="n">1,404</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">97.90%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">1.28%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-ta)">ML &nbsp;Malayalam</span><span class="n">n=3,846</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">1,937</span></div><div class="cm-cell bad"><span class="n">80</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad" style="background:var(--critical); color:var(--surface);"><span class="n">1,252</span></div><div class="cm-cell ok"><span class="n">577</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v" style="color:var(--critical)">65.37%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--critical)">31.64%</span></div></div>
+      </div>
+    </div>
+
+    <div class="callout warn"><span class="icon"></span><p><b>Malayalam is where this breaks.</b> 1,252 of its 1,829 deepfake clips (68%) are misclassified as real at this threshold &mdash; and 31.64% is Malayalam's EER even at its <em>own</em> best possible threshold, so this isn't a calibration problem that a per-language threshold would fix. The shared embedding genuinely doesn't separate real from fake well for Malayalam. Gujarati, by contrast, generalizes about as well as the trained languages. See &sect;12 for the fix.</p></div>
+  </section>
+
+  <!-- ============================================================ 12 -->
+  <section id="sec-fix">
+    <div class="sec-head"><span class="num">12</span><h2>The fix: training directly on all 5 languages</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">&sect;11 showed Malayalam breaking hard (65.37% accuracy, 31.64% EER) even at its own best threshold &mdash; a genuine feature-separability problem, not a calibration one. Before retraining, a quick diagnostic ruled out the obvious suspect.</p>
+
+    <div class="callout info"><span class="icon"></span><p><b>Backbone-coverage check, ruled out.</b> A linear-probe test &mdash; 5-fold cross-validated logistic regression on frozen mean-pooled embeddings, no training involved &mdash; scored <b class="mono">98.67%</b> separability for the current XLSR backbone on a balanced Malayalam sample, versus <b class="mono">98.33%</b> for Meta's MMS-300m (a backbone pretrained explicitly on 1000+ languages, Malayalam included). Swapping backbones would not have helped: the frozen features already carried near-perfect real/fake signal for Malayalam. The bottleneck was never backbone coverage &mdash; it was that the conformer head had simply never been trained on a single Malayalam clip.</p></div>
+
+    <h3>What changed</h3>
+    <div class="steps">
+      <div class="step"><div class="idx">01</div><div class="body"><b>Re-cached frozen-backbone features for the full corpus</b><span>All 5 languages already sitting in <code class="mono">indic_df/manifest.tsv</code> (Gujarati and Malayalam had proper train/dev/test splits left over from the paused 7-language build, &sect;4 &mdash; they'd just never been used for training) &mdash; 20,535 train / 4,770 dev / 3,884 test clips.</span></div></div>
+      <div class="step"><div class="idx">02</div><div class="body"><b>Retrained the same 1.79M-param conformer head</b> on hi+bn+ta+ml+gu jointly<span>Identical architecture and training script as &sect;5 &mdash; the only change is which languages are in the training set. Best checkpoint at epoch 11: dev EER 0.10%.</span></div></div>
+      <div class="step"><div class="idx">03</div><div class="body"><b>Re-ran the fixed-threshold confusion matrices from &sect;11</b> on the held-out test split for every language<span>New operating threshold (in-domain EER 0.16% on the hi/bn/ta test set) applied uniformly, exactly as before.</span></div></div>
+    </div>
+
+    <h3>Before &rarr; after, the two languages that mattered</h3>
+    <div class="cm-grid">
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-ta)">ML &nbsp;Malayalam</span><span class="n">test split</span></div>
+        <div class="cm-stats" style="border-top:none; padding-top:0;">
+          <div><span class="k">Accuracy before</span><span class="v" style="color:var(--critical)">65.37%</span></div>
+          <div><span class="k">Accuracy after</span><span class="v" style="color:var(--good)">100.00%</span></div>
+        </div>
+        <div class="cm-stats">
+          <div><span class="k">EER before</span><span class="v" style="color:var(--critical)">31.64%</span></div>
+          <div><span class="k">EER after</span><span class="v" style="color:var(--good)">0.00%</span></div>
+        </div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-hi)">GU &nbsp;Gujarati</span><span class="n">test split</span></div>
+        <div class="cm-stats" style="border-top:none; padding-top:0;">
+          <div><span class="k">Accuracy before</span><span class="v" style="color:var(--good)">97.90%</span></div>
+          <div><span class="k">Accuracy after</span><span class="v" style="color:var(--good)">100.00%</span></div>
+        </div>
+        <div class="cm-stats">
+          <div><span class="k">EER before</span><span class="v" style="color:var(--good)">1.28%</span></div>
+          <div><span class="k">EER after</span><span class="v" style="color:var(--good)">0.00%</span></div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12.5px; color:var(--ink-faint); margin-top:-4px;">"Before" (&sect;11) scored every clip of the then-unseen language, n=3,846 (ml) / 3,529 (gu). "After" scores only the held-out test split &mdash; n=326 (ml) / 516 (gu) &mdash; since retraining moved the rest into train/dev. Different n by necessity, to keep the comparison leak-free.</p>
+
+    <h3>Full held-out test set, all 5 languages, this checkpoint</h3>
+    <div class="cm-grid">
+      <div class="cm-card" style="grid-column:1/-1; max-width:360px;">
+        <div class="cm-title"><span class="name">All 5 languages combined</span><span class="n">n=3,884</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">pred. real</div><div class="hd">pred. fake</div>
+          <div class="rowhd">actual real</div><div class="cm-cell ok"><span class="n">2,712</span></div><div class="cm-cell bad"><span class="n">4</span></div>
+          <div class="rowhd">actual fake</div><div class="cm-cell bad"><span class="n">2</span></div><div class="cm-cell ok"><span class="n">1,166</span></div>
+        </div>
+        <div class="cm-stats">
+          <div><span class="k">Accuracy</span><span class="v">99.85%</span></div>
+          <div><span class="k">Precision</span><span class="v">99.93%</span></div>
+          <div><span class="k">Recall</span><span class="v">99.85%</span></div>
+          <div><span class="k">EER</span><span class="v" style="color:var(--good)">0.16%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cm-grid">
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag bn">BN</span> Bengali</span><span class="n">n=692</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">596</span></div><div class="cm-cell bad"><span class="n">0</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">0</span></div><div class="cm-cell ok"><span class="n">96</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">100.00%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.00%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag hi">HI</span> Hindi</span><span class="n">n=1,368</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">748</span></div><div class="cm-cell bad"><span class="n">4</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">0</span></div><div class="cm-cell ok"><span class="n">616</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">99.71%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.30%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name"><span class="tag ta">TA</span> Tamil</span><span class="n">n=982</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">704</span></div><div class="cm-cell bad"><span class="n">0</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">2</span></div><div class="cm-cell ok"><span class="n">276</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">99.80%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.39%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-hi)">GU &nbsp;Gujarati</span><span class="n">n=516</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">356</span></div><div class="cm-cell bad"><span class="n">0</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">0</span></div><div class="cm-cell ok"><span class="n">160</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">100.00%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.00%</span></div></div>
+      </div>
+      <div class="cm-card">
+        <div class="cm-title"><span class="name" style="color:var(--lang-ta)">ML &nbsp;Malayalam</span><span class="n">n=326</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">308</span></div><div class="cm-cell bad"><span class="n">0</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">0</span></div><div class="cm-cell ok"><span class="n">18</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">100.00%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--good)">0.00%</span></div></div>
+      </div>
+    </div>
+
+    <div class="callout info"><span class="icon"></span><p><b>The diagnosis held up.</b> &sect;11 argued Malayalam's failure was a training-data gap, not a backbone or calibration problem &mdash; folding its data into training fixed it completely (31.64%&rarr;0.00% EER) without hurting any other language (all five now sit at or below 0.39% EER on held-out test data). This is the strongest evidence in this report that the frozen-backbone architecture generalizes fine <em>once the head has actually seen the language</em>.</p></div>
+
+    <div class="callout warn"><span class="icon"></span><p><b>Trade-off: no held-out language remains.</b> This checkpoint has now trained on every language in the corpus, so there is no longer any way to test true zero-shot cross-lingual generalization (what &sect;10 measured) with the current data. Any claim about performance on a genuinely new, 6th language is untested, not just untested-and-good. &sect;13 fixes that by pulling in 5 fresh ones.</p></div>
+  </section>
+
+  <!-- ============================================================ 13 -->
+  <section id="sec-zeroshot5">
+    <div class="sec-head"><span class="num">13</span><h2>Zero-shot test: 5 more languages, never in the corpus</h2></div>
+    <p style="margin-bottom:22px; color:var(--ink-soft); font-size:15.5px;">&sect;12 closed off the corpus's only held-out language, so the honest next step is to pull in languages that were never part of this project at all &mdash; new real-speech sources, scored with the same fixed deployment threshold, zero retraining.</p>
+
+    <div class="steps">
+      <div class="step"><div class="idx">01</div><div class="body"><b>5 new languages, 500 clips each</b> (250 real + 250 fake)<span>Real speech from fresh HF sources per language (PharynxAI, an IIIT-B ASR corpus, a Punjabi ASR set, a Sanskrit ASR set) &mdash; none touched by this project before. Fake speech from the same <code class="mono">vdivyasharma/IndicSynth</code> generator family used throughout, so the fake side is apples-to-apples with every other result in this report.</span></div></div>
+      <div class="step"><div class="idx">02</div><div class="body"><b>Same checkpoint, same fixed threshold</b> (&minus;1.0212, &sect;12)<span>No recalibration, no fine-tuning &mdash; the exact deployment setting from &sect;12, pointed at languages it has genuinely never seen.</span></div></div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Language</th><th>Family</th><th>n</th><th>Accuracy (fixed thr.)</th><th>EER (own thr.)</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag hi">KN</span> Kannada</td><td>Dravidian</td><td>500</td><td>99.40%</td><td style="color:var(--good)">0.40%</td></tr>
+          <tr><td><span class="tag bn">MR</span> Marathi</td><td>Indo-Aryan</td><td>500</td><td>99.80%</td><td style="color:var(--good)">0.00%</td></tr>
+          <tr><td><span class="tag ta">PA</span> Punjabi</td><td>Indo-Aryan</td><td>500</td><td>98.40%</td><td style="color:var(--good)">0.00%</td></tr>
+          <tr><td><span class="tag hi">TE</span> Telugu</td><td>Dravidian</td><td>500</td><td>98.40%</td><td style="color:var(--good)">0.00%</td></tr>
+          <tr><td><span class="tag bn">SA</span> Sanskrit</td><td>Indo-Aryan (liturgical)</td><td>500</td><td>96.20%</td><td style="color:var(--critical)">4.80%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12.5px; color:var(--ink-faint); margin-top:4px;">Mean across all 5: 98.44% accuracy, 1.04% EER. "Family" is linguistic lineage, not a corpus label &mdash; included because it's the most likely explanation for Sanskrit's outlier result below.</p>
+
+    <div class="cm-grid">
+      <div class="cm-card">
+        <div class="cm-title"><span class="name">SA &nbsp;Sanskrit &mdash; the outlier</span><span class="n">n=500</span></div>
+        <div class="cm-table">
+          <div class="hd"></div><div class="hd">real</div><div class="hd">fake</div>
+          <div class="rowhd">real</div><div class="cm-cell ok"><span class="n">243</span></div><div class="cm-cell bad"><span class="n">7</span></div>
+          <div class="rowhd">fake</div><div class="cm-cell bad"><span class="n">12</span></div><div class="cm-cell ok"><span class="n">238</span></div>
+        </div>
+        <div class="cm-stats"><div><span class="k">Accuracy</span><span class="v">96.20%</span></div><div><span class="k">EER</span><span class="v" style="color:var(--critical)">4.80%</span></div></div>
+      </div>
+    </div>
+
+    <div class="callout info"><span class="icon"></span><p><b>Zero-shot generalization holds up, mostly.</b> 4 of 5 fresh languages &mdash; two Dravidian (Kannada, Telugu), two Indo-Aryan (Marathi, Punjabi) &mdash; land at 98.4&ndash;99.8% accuracy and 0.00&ndash;0.40% EER despite zero exposure during training. That's close to the trained-language numbers in &sect;12, on languages this checkpoint has truly never touched. The frozen-backbone-plus-small-head recipe generalizes well within the modern-Indic-language distribution it was built on.</p></div>
+
+    <div class="callout warn"><span class="icon"></span><p><b>Sanskrit is the one language that visibly struggles</b> (4.80% EER, 12 fakes slipped through as real out of 250). The likely cause isn't the language itself so much as a register mismatch: the real-speech source here is recited/liturgical Sanskrit (formal chanting cadence, sustained vowels), while every other language's "real" side in this report is spontaneous conversational speech. That's a corpus-distribution gap, not necessarily a Sanskrit-specific one &mdash; it would be worth re-testing with conversational Sanskrit speech, if a corpus of that exists, before concluding the model is weak on the language per se.</p></div>
+  </section>
+
+  <!-- ============================================================ 14 -->
   <section id="sec-limits">
-    <div class="sec-head"><span class="num">08</span><h2>Limitations &amp; honest caveats</h2></div>
+    <div class="sec-head"><span class="num">14</span><h2>Limitations &amp; honest caveats</h2></div>
     <ul class="plain">
       <li><b>Small dev/test sets per language.</b> Bengali dev is 454 clips, Tamil dev 258 — early-stopping decisions and the 0.00% Tamil EER numbers should be read as encouraging, not as statistically tight estimates.</li>
       <li><b>Corpus scaled down from 6GB to ~2.9GB</b> mid-build (see &sect;4) after streaming-resume costs made repeated interruptions expensive. More data, particularly more distinct TTS/VC systems, would likely improve robustness to attacks not represented here.</li>
@@ -575,12 +1033,17 @@
       <li><b>Training crashed at epoch 5</b> on a CUDA out-of-memory error, likely triggered by a concurrent CPU-side evaluation job pushing the system over the edge while GPU VRAM was already pinned near its 8GB ceiling throughout. The epoch-4 checkpoint (already the best on dev EER) was kept as final rather than risk another crash chasing marginal gains.</li>
       <li><b>Catastrophic forgetting on the original task</b> (&sect;7) is real and unmitigated in this run.</li>
       <li><b>The gated 12-language <code class="mono">ai4bharat/IndicVoices</code> dataset was not used</b> — access approval didn't register, and its audio needs FFmpeg tooling not present on this machine. This report covers 3 of India's 22 scheduled languages.</li>
+      <li><b>The domain-adversarial checkpoint (&sect;9&ndash;10) is not a clear upgrade.</b> Its cross-lingual EER (12.50%) is statistically tied with the plain model's (12.38%) on the ml+gu test, and the dev-set language accuracy never cleanly converged to the 33.3% chance floor. Superseded in practice by &sect;12: direct labeled data did what adversarial exposure aimed for and then some, so this is now a lower-priority avenue unless a genuinely unlabeled new language shows up.</li>
+      <li><b>The cross-lingual test itself was 2 languages, unevenly difficult</b> (Gujarati ~1.5&ndash;2% EER, Malayalam ~21% EER for both &sect;9 checkpoints) — not enough to generalize "this works/doesn't work across languages" as a blanket claim. Moot now regardless: see next point.</li>
+      <li><b>Malayalam failed hard at its own best threshold (&sect;11): 31.64% EER, 65.37% accuracy — fixed in &sect;12</b> by folding Malayalam (and Gujarati) into training; a linear-probe diagnostic confirmed the frozen backbone's features were already separable (98.67%), so the fix was data, not architecture.</li>
+      <li><b>Sanskrit is the weak point among the 5 fresh zero-shot languages tested in &sect;13</b> (4.80% EER vs 0.00&ndash;0.40% for Kannada/Marathi/Punjabi/Telugu). Likely a register mismatch (liturgical/recited speech vs. the conversational speech everywhere else in the corpus) rather than a language-specific failure, but that's a hypothesis, not a confirmed diagnosis — no conversational-Sanskrit source was tested.</li>
+      <li><b>The &sect;13 zero-shot languages were tested at n=500 each</b> (250 real + 250 fake), and only against the IndicSynth generator family already used throughout this report. A larger sample and a wider set of unseen deepfake generators would tighten these estimates and test a dimension (generator diversity) this report doesn't cover at all.</li>
     </ul>
   </section>
 
-  <!-- ============================================================ 09 -->
+  <!-- ============================================================ 15 -->
   <section id="sec-manifest" class="manifest">
-    <div class="sec-head"><span class="num">09</span><h2>Reproducing this report</h2></div>
+    <div class="sec-head"><span class="num">15</span><h2>Reproducing this report</h2></div>
     <p style="margin-bottom:18px; color:var(--ink-soft); font-size:15.5px;">Every number above comes from a checked-in script and a file under <code class="mono">results/</code> or <code class="mono">results_indic/</code>.</p>
 
     <div class="tbl-wrap">
@@ -593,6 +1056,15 @@
           <tr><td><code>finetune_indic.py</code></td><td>Trains the conformer head, logs <code>finetune_log.tsv</code></td></tr>
           <tr><td><code>evaluate_indic.py</code> / <code>confusion_indic.py</code></td><td>Per-language / per-codec EER &amp; confusion matrices</td></tr>
           <tr><td><code>model_indic_ft.safetensors</code></td><td>Final fine-tuned checkpoint (epoch 4)</td></tr>
+          <tr><td><code>finetune_language_agnostic.py</code></td><td>Domain-adversarial (GRL) training, logs <code>finetune_agnostic_log.tsv</code></td></tr>
+          <tr><td><code>evaluate_cross_lingual.py</code></td><td>Scores both checkpoints on held-out-language (ml/gu) audio</td></tr>
+          <tr><td><code>model_indic_ft_agnostic.safetensors</code></td><td>Domain-adversarial checkpoint (epoch 7)</td></tr>
+          <tr><td><code>confusion_all_languages.py</code></td><td>Fixed-threshold confusion matrices across all corpus languages (&sect;11, &sect;12); <code>--train_langs</code> flag controls which get the held-out-test-only treatment</td></tr>
+          <tr><td><code>probe_mms_vs_xlsr.py</code></td><td>&sect;12's backbone-coverage diagnostic — linear-probe separability, XLSR vs MMS-300m</td></tr>
+          <tr><td><code>model_indic_ft_5lang.safetensors</code></td><td>&sect;12's checkpoint — head retrained on hi+bn+ta+ml+gu jointly (epoch 11, dev EER 0.10%)</td></tr>
+          <tr><td><code>confusion_all_languages_5lang.csv</code></td><td>&sect;12's held-out test-set confusion matrices for the 5-language checkpoint</td></tr>
+          <tr><td><code>test_new_language.py</code></td><td>&sect;13's zero-shot probe &mdash; pulls fresh real+fake audio for a language never in the corpus and scores it against any checkpoint</td></tr>
+          <tr><td><code>eval_new_languages_all.csv</code></td><td>&sect;13's results across Kannada, Marathi, Punjabi, Sanskrit, Telugu</td></tr>
         </tbody>
       </table>
     </div>
@@ -601,7 +1073,9 @@
 
   <footer>
     <span>XLSR-Mamba Field Report</span>
-    <span>Generated 11 Sep 2026 · RTX 5060 Laptop · PyTorch 2.10.0+cu128</span>
+    <span>Generated 11 Sep 2026, updated 13 Sep 2026 · RTX 5060 Laptop · PyTorch 2.10.0+cu128</span>
   </footer>
 
 </div>
+
+</body></html>

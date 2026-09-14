@@ -1,0 +1,12 @@
+epoch	train_spoof_loss	train_lang_loss	lambda	dev_eer_overall	dev_lang_acc	detail
+1	0.2792	1.0368	0.118	1.261	54.25	lang:bn=1.84 lang:hi=1.04 lang:ta=1.06 codec:clean=1.04 codec:whatsapp=1.26
+2	0.0484	1.1172	0.204	1.261	51.94	lang:bn=1.62 lang:hi=2.00 lang:ta=0.00 codec:clean=1.26 codec:whatsapp=1.48
+3	0.0322	1.1554	0.254	1.000	51.21	lang:bn=1.51 lang:hi=1.04 lang:ta=0.19 codec:clean=1.04 codec:whatsapp=1.04
+4	0.0244	1.0572	0.279	0.630	57.14	lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74
+5	0.0235	1.0926	0.291	0.630	52.31	lang:bn=1.51 lang:hi=0.96 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74
+6	0.0152	1.0823	0.296	0.630	54.04	lang:bn=1.51 lang:hi=0.48 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74
+7	0.0108	1.0901	0.298	0.522	44.17	lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.52
+8	0.0091	1.0821	0.299	0.892	48.79	lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.74 codec:whatsapp=1.04
+9	0.0073	1.0765	0.300	0.630	54.67	lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74
+10	0.0049	1.0668	0.300	0.630	54.10	lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74
+11	0.0038	1.0694	0.300	0.522	54.15	lang:bn=1.51 lang:hi=0.48 lang:ta=0.00 codec:clean=0.22 codec:whatsapp=0.74

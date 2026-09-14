@@ -69,6 +69,42 @@ re-skips after transient stalls/interruptions, the corpus was finalized at
 Each row is a `clean` or `whatsapp`-compressed clip; dev/test carry both variants
 per source clip. Train/dev/test present for all 6 buckets.
 
-## Results
+## Results (original hi/bn/ta fine-tune)
 
-_pending — populated after the pipeline run._
+`model_indic_ft.safetensors`, best at epoch 4 (training crashed with a CUDA OOM at
+epoch 5): **0.31% EER** on the held-out hi/bn/ta test split, 99.69% accuracy on both
+clean and WhatsApp-compressed audio. Full per-epoch curves: `first_finetune_curves.png`
+and `finetune_run.log` in this folder.
+
+Training regressed the original ASVspoof5 task to 21.28% EER (from 2.77%) —
+catastrophic forgetting, unmitigated in this checkpoint.
+
+## Extension: 5 languages + domain-adversarial training + zero-shot test
+
+This corpus and pipeline were later extended well beyond the original 3 languages.
+Short version — full narrative, diagrams, and every number in
+`XLSR-Mamba-Field-Report.pdf` (§8–§14):
+
+1. **Domain-adversarial training** (`finetune_language_agnostic.py`) was tried first,
+   to make the head language-agnostic without adding new training languages. Result:
+   a statistical wash on cross-lingual EER (12.50% vs. 12.38%), not a clear win.
+2. **Malayalam and Gujarati were folded directly into training** instead (corpus grew
+   to 5 languages, 29,189 clips). A linear-probe diagnostic first confirmed the frozen
+   backbone's features were *already* separable for Malayalam (98.67%) — including
+   against a backbone pretrained on 1000+ languages, which did no better — so the
+   fix was data, not architecture. Result: **99.85% accuracy / 0.16% EER across all
+   5 languages' held-out test data**; Malayalam alone went from 65.37%/31.64% EER to
+   100%/0.00% EER. Best checkpoint: `model_indic_ft_5lang.safetensors`, epoch 11.
+3. **Zero-shot test on 6 more languages** never in this corpus at all (Kannada,
+   Marathi, Punjabi, Telugu, Sanskrit — via `test_new_language.py` / `test_6th_language.py`)
+   scored **98.44% mean accuracy** with zero retraining. Sanskrit was the one outlier
+   (4.80% EER), likely because its source is recited/liturgical speech rather than the
+   conversational speech used everywhere else in this project.
+
+| File | What it has |
+|---|---|
+| `finetune_agnostic_log.tsv` / `finetune_agnostic_run.log` | domain-adversarial training curves |
+| `finetune_5lang.log` | 5-language head retrain, per-epoch dev EER |
+| `cross_lingual_eval.csv` | plain vs. adversarial checkpoint on then-unseen ml/gu |
+| `confusion_all_languages.csv` / `confusion_all_languages_5lang.csv` | fixed-threshold confusion matrices, before/after the 5-language fix |
+| `eval_6th_language_kn.csv` / `eval_new_languages_all.csv` | zero-shot results on Kannada, then Marathi/Punjabi/Sanskrit/Telugu |

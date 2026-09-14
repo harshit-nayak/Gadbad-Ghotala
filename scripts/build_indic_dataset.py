@@ -35,9 +35,34 @@ OUT   = os.environ.get('INDIC_DF', r'C:\Users\ATHARV\SIH_data\indic_df')
 SR    = 16000
 MAX_S = 6.0
 MIN_S = 1.0
-LANGS = {'Hindi': 'hi', 'Bengali': 'bn', 'Tamil': 'ta'}
-REAL_REPO = 'SPRINGLab/IndicVoices-R_{lang}'
+LANGS = {'Hindi': 'hi', 'Bengali': 'bn', 'Tamil': 'ta', 'Malayalam': 'ml',
+         'Gujarati': 'gu', 'Kannada': 'kn', 'Marathi': 'mr'}
+# Real-speech source per language: (repo, config, audio_field, needs_bytes_decode, shard_subdir).
+# Most real-speech repos store audio as an HF Audio feature under a column named
+# 'audio' (encoded bytes, decode=False to skip torchcodec) - asr-malayalam stores
+# it as a plain {'array','sampling_rate'} struct instead (no decode needed), and
+# the PharynxAI repos use the same Audio-feature/bytes scheme but under a
+# differently-named column ('audio_filepath').
+REAL_REPOS = {
+    'hi': ('SPRINGLab/IndicVoices-R_Hindi', None, 'audio', True, 'data'),
+    'bn': ('SPRINGLab/IndicVoices-R_Bengali', None, 'audio', True, 'data'),
+    'ta': ('SPRINGLab/IndicVoices-R_Tamil', None, 'audio', True, 'data'),
+    'ml': ('asr-malayalam/indicvoices-v1a', None, 'audio', False, 'data'),
+    'gu': ('PharynxAI/IndicVoices-gujarati-10000', None, 'audio_filepath', True, 'data'),
+    'kn': ('PharynxAI/IndicVoices-kannada-10000', None, 'audio_filepath', True, 'data'),
+    'mr': ('PharynxAI/IndicVoices-marathi-10000', None, 'audio_filepath', True, 'data'),
+}
 FAKE_REPO = 'vdivyasharma/IndicSynth'
+
+from huggingface_hub import HfFileSystem
+_fs = HfFileSystem()
+
+
+def list_shards(repo, subdir):
+    """Sorted list of parquet shard filenames (repo-relative) under subdir/."""
+    entries = _fs.ls(f'datasets/{repo}/{subdir}', detail=True)
+    prefix = f'{repo}/'
+    return sorted(e['name'].split(prefix, 1)[1] for e in entries if e['name'].endswith('.parquet'))
 
 
 def to_mono16k(wav, sr):
@@ -137,51 +162,75 @@ def main():
         man_f.flush()
         return nb
 
-    # persistent iterator per bucket, so round-robin filling resumes cheaply
-    _iters = {}
+    # Shard-level resume: state[key] = index of the next not-yet-consumed shard.
+    # A restart re-fetches at worst the ONE shard that was in progress, never the
+    # whole stream from row 0 - unlike a single continuous .skip(cursor) stream,
+    # where a restart has to re-download and discard every row already seen.
+    _shard_state = {}
 
-    def _mk_iter(repo, config, cursor):
-        ds = load_dataset(repo, config, split='train', streaming=True)
-        ds = ds.cast_column('audio', Audio(decode=False))
-        if cursor:
-            ds = ds.skip(cursor)
-        return iter(ds)
+    def _shards_for(key, repo, shard_subdir):
+        if key not in _shard_state:
+            shards = list_shards(repo, shard_subdir)
+            _shard_state[key] = {'shards': shards, 'idx': state.get(key, 0), 'iter': None}
+        return _shard_state[key]
 
     def run(lang, lcode, label, repo, config, spk_fields, gender_field, gm_field, txt_field,
-            sub_budget):
+            needs_decode, shard_subdir, audio_field, *, sub_budget):
         """Fill this bucket up to sub_budget bytes (a slice of the round), then return."""
         key = f'{lcode}:{label}'
         lbl = str(label)
-        if have.get((lcode, lbl), 0) >= min(sub_budget, budget):
+        cap = min(sub_budget, budget)
+        if have.get((lcode, lbl), 0) >= cap:
             return
-        cursor = state.get(key, 0)
-        if key not in _iters:
-            _iters[key] = _mk_iter(repo, config, cursor)
-        for attempt in range(6):
+        st = _shards_for(key, repo, shard_subdir)
+
+        while have.get((lcode, lbl), 0) < cap and st['idx'] < len(st['shards']):
+            if st['iter'] is None:
+                shard_file = st['shards'][st['idx']]
+                try:
+                    ds = load_dataset(repo, config, data_files={'train': [shard_file]},
+                                      split='train', streaming=True)
+                    if needs_decode:
+                        ds = ds.cast_column(audio_field, Audio(decode=False))
+                    st['iter'] = iter(ds)
+                except Exception as e:
+                    print(f'  [{key}] shard open failed ({e!r}); retry next round', flush=True)
+                    time.sleep(15)
+                    return
             try:
-                it = _iters[key]
-                for ex in it:
-                    cursor += 1
-                    if cursor >= args.max_stream:
-                        break
-                    if have.get((lcode, lbl), 0) >= min(sub_budget, budget):
-                        break
+                n_this_shard = 0
+                for ex in st['iter']:
+                    n_this_shard += 1
+                    if have.get((lcode, lbl), 0) >= cap:
+                        return   # pause mid-shard; st['iter'] kept, resumes same shard next round
                     spk = 'unk'
                     for fld in spk_fields:
                         if ex.get(fld) not in (None, ''):
                             spk = str(ex[fld]); break
                     gm = str(ex.get(gm_field, '')) if gm_field else ''
-                    b = ex['audio']['bytes']
-                    if not b:
-                        continue
+                    au = ex[audio_field]
+                    if needs_decode:
+                        # HF Audio feature, decode=False -> {'bytes':..., 'path':...}
+                        b = au.get('bytes') if isinstance(au, dict) else au
+                        if not b:
+                            continue
+                        dedup_key = str(len(b))
+                        try:
+                            w, sr = sf.read(io.BytesIO(b), dtype='float32')
+                        except Exception:
+                            continue
+                    else:
+                        # plain {'array','sampling_rate'} struct, already decoded
+                        arr = au.get('array')
+                        if arr is None or len(arr) == 0:
+                            continue
+                        w = np.asarray(arr, dtype='float32')
+                        sr = au.get('sampling_rate', SR)
+                        dedup_key = str(len(w))
                     uid = f'{lcode}_{"r" if label==1 else "f"}_' + hashlib.md5(
-                        (spk + '|' + gm + '|' + str(ex.get(txt_field, '')) + '|' + str(len(b))).encode()
+                        (spk + '|' + gm + '|' + str(ex.get(txt_field, '')) + '|' + dedup_key).encode()
                     ).hexdigest()[:16]
                     if (lcode, str(label), uid) in done:
-                        continue
-                    try:
-                        w, sr = sf.read(io.BytesIO(b), dtype='float32')
-                    except Exception:
                         continue
                     w = to_mono16k(w, sr)
                     if len(w) < MIN_S * SR:
@@ -189,41 +238,58 @@ def main():
                     w = trim(w)
                     sp = split_for(('r' if label == 1 else 'f') + spk, args.seed)
                     nb = emit(uid, lcode, label, sp, spk, str(ex.get(gender_field, '')), gm, w)
-                    have[(lcode, str(label))] = have.get((lcode, str(label)), 0) + nb
+                    have[(lcode, lbl)] = have.get((lcode, lbl), 0) + nb
                     done.add((lcode, str(label), uid))
-                    if cursor % 200 == 0:
-                        state[key] = cursor
-                        json.dump(state, open(state_path, 'w'))
-                        print(f'  [{key}] {cursor} streamed, {have[(lcode,str(label))]/1e9:.2f}/{budget/1e9:.2f} GB', flush=True)
-                break
-            except Exception as e:
-                print(f'  [{key}] stream error ({e!r}); saving cursor {cursor}, will resume next round', flush=True)
-                state[key] = cursor
+                    if n_this_shard % 200 == 0:
+                        print(f'  [{key}] shard {st["idx"]+1}/{len(st["shards"])}: '
+                              f'{n_this_shard} rows, {have[(lcode,lbl)]/1e9:.2f}/{budget/1e9:.2f} GB',
+                              flush=True)
+                # shard exhausted
+                st['idx'] += 1
+                st['iter'] = None
+                state[key] = st['idx']
                 json.dump(state, open(state_path, 'w'))
-                _iters.pop(key, None)          # recreate once, next round
-                time.sleep(20)
-                break
-        state[key] = cursor
-        json.dump(state, open(state_path, 'w'))
+                print(f'  [{key}] shard {st["idx"]}/{len(st["shards"])} done, '
+                      f'{have.get((lcode,lbl),0)/1e9:.2f}/{budget/1e9:.2f} GB', flush=True)
+            except Exception as e:
+                print(f'  [{key}] stream error mid-shard ({e!r}); retrying same shard next round',
+                      flush=True)
+                st['iter'] = None       # redo this one shard, not the whole bucket
+                time.sleep(15)
+                return
+        if st['idx'] >= len(st['shards']):
+            print(f'  [{key}] all {len(st["shards"])} shards exhausted, '
+                  f'final {have.get((lcode,lbl),0)/1e9:.2f} GB', flush=True)
 
     buckets = []
     for LNAME, lcode in LANGS.items():
-        buckets.append((LNAME, lcode, 1, REAL_REPO.format(lang=LNAME), None,
-                        ['speaker_id'], 'gender', None, 'text'))
+        real_repo, real_cfg, real_audio_field, real_decode, real_subdir = REAL_REPOS[lcode]
+        buckets.append((LNAME, lcode, 1, real_repo, real_cfg,
+                        ['speaker_id'], 'gender', None, 'text', real_decode, real_subdir,
+                        real_audio_field))
         buckets.append((LNAME, lcode, 0, FAKE_REPO, LNAME,
                         ['Target Speaker ID', 'Source Speaker_ID'], 'Gender',
-                        'Generative Model', 'TTS Transcript'))
+                        'Generative Model', 'TTS Transcript', True, LNAME, 'audio'))
+
+    def bucket_exhausted(lcode, label):
+        st = _shard_state.get(f'{lcode}:{label}')
+        return st is not None and st['idx'] >= len(st['shards'])
+
+    def bucket_pending(b):
+        lcode, label = b[1], b[2]
+        return have.get((lcode, str(label)), 0) < budget and not bucket_exhausted(lcode, label)
 
     STEP = 0.35e9
     rt = STEP
-    while any(have.get((b[1], str(b[2])), 0) < budget for b in buckets):
-        before = sum(have.values())
+    # Resuming into shards already consumed under the old row-cursor scheme means
+    # early rounds can add near-zero NEW bytes (everything dedups) before reaching
+    # fresh data - so stop only on true exhaustion (every shard list drained), not
+    # on a single unproductive round.
+    while any(bucket_pending(b) for b in buckets):
         for b in buckets:
-            run(*b, sub_budget=rt)
+            if bucket_pending(b):
+                run(*b, sub_budget=rt)
         rt = min(rt + STEP, budget)
-        if sum(have.values()) - before < 1e6:      # a full pass added <1 MB -> data exhausted
-            print('  (sources exhausted before target)', flush=True)
-            break
 
     man_f.close()
     total = sum(have.values())

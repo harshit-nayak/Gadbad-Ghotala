@@ -1,0 +1,11 @@
+model,group,value,eer,n
+model_indic_ft.safetensors,overall,ml+gu,12.375,3200
+model_indic_ft.safetensors,lang,gu,2.0,1600
+model_indic_ft.safetensors,lang,ml,20.875,1600
+model_indic_ft.safetensors,codec,clean,11.7503764129531,1634
+model_indic_ft.safetensors,codec,whatsapp,12.579740166534819,1566
+model_indic_ft_agnostic.safetensors,overall,ml+gu,12.5,3200
+model_indic_ft_agnostic.safetensors,lang,gu,1.375,1600
+model_indic_ft_agnostic.safetensors,lang,ml,20.5,1600
+model_indic_ft_agnostic.safetensors,codec,clean,11.872776167254695,1634
+model_indic_ft_agnostic.safetensors,codec,whatsapp,12.962884428749682,1566

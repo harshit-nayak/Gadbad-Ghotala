@@ -1,0 +1,2 @@
+lang,n,n_real,n_fake,own_threshold_eer_pct,fixed_threshold,note
+kn,500,250,250,0.40,-1.0212,never seen in training/dev/test - true zero-shot

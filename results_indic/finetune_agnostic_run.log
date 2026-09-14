@@ -1,0 +1,95 @@
+common - <dataclasses._MISSING_TYPE object at 0x0000017E476F1160>
+2026-09-12 23:53:25 | INFO | fairseq.tasks.text_to_speech | Please install tensorboardX: pip install tensorboardX
+training conformer head: 1.79 M params + language discriminator: 9475 params (max_lambda=0.3)
+train 12730  dev 1904  languages ['hi', 'bn', 'ta']
+  ep 1 batch 25/198  spoof_loss 0.9035  lang_loss 1.0803  lambda 0.015  4490 ms/batch
+  ep 1 batch 50/198  spoof_loss 0.7246  lang_loss 1.0699  lambda 0.031  6795 ms/batch
+  ep 1 batch 75/198  spoof_loss 0.5880  lang_loss 1.0587  lambda 0.046  8175 ms/batch
+  ep 1 batch 100/198  spoof_loss 0.4785  lang_loss 1.0487  lambda 0.062  9185 ms/batch
+  ep 1 batch 125/198  spoof_loss 0.4031  lang_loss 1.0441  lambda 0.077  9958 ms/batch
+  ep 1 batch 150/198  spoof_loss 0.3495  lang_loss 1.0389  lambda 0.091  9785 ms/batch
+  ep 1 batch 175/198  spoof_loss 0.3076  lang_loss 1.0368  lambda 0.105  9414 ms/batch
+ep  1  spoof_loss 0.2792  lang_loss 1.0368  dev EER 1.26%  dev lang-acc 54.3% (chance=33.3%)  (lang:bn=1.84 lang:hi=1.04 lang:ta=1.06 codec:clean=1.04 codec:whatsapp=1.26)  1965s
+  ep 2 batch 25/198  spoof_loss 0.0512  lang_loss 1.0326  lambda 0.131  6055 ms/batch
+  ep 2 batch 50/198  spoof_loss 0.0531  lang_loss 1.0546  lambda 0.143  6259 ms/batch
+  ep 2 batch 75/198  spoof_loss 0.0531  lang_loss 1.0993  lambda 0.155  8642 ms/batch
+  ep 2 batch 100/198  spoof_loss 0.0478  lang_loss 1.1331  lambda 0.166  9751 ms/batch
+  ep 2 batch 125/198  spoof_loss 0.0465  lang_loss 1.1427  lambda 0.177  9477 ms/batch
+  ep 2 batch 150/198  spoof_loss 0.0491  lang_loss 1.1319  lambda 0.187  9198 ms/batch
+  ep 2 batch 175/198  spoof_loss 0.0500  lang_loss 1.1232  lambda 0.196  9198 ms/batch
+ep  2  spoof_loss 0.0484  lang_loss 1.1172  dev EER 1.26%  dev lang-acc 51.9% (chance=33.3%)  (lang:bn=1.62 lang:hi=2.00 lang:ta=0.00 codec:clean=1.26 codec:whatsapp=1.48)  2004s
+  ep 3 batch 25/198  spoof_loss 0.0273  lang_loss 1.0746  lambda 0.213  9232 ms/batch
+  ep 3 batch 50/198  spoof_loss 0.0240  lang_loss 1.1613  lambda 0.220  10370 ms/batch
+  ep 3 batch 75/198  spoof_loss 0.0326  lang_loss 1.2053  lambda 0.227  10785 ms/batch
+  ep 3 batch 100/198  spoof_loss 0.0318  lang_loss 1.1781  lambda 0.234  10866 ms/batch
+  ep 3 batch 125/198  spoof_loss 0.0317  lang_loss 1.1563  lambda 0.240  9611 ms/batch
+  ep 3 batch 150/198  spoof_loss 0.0323  lang_loss 1.1548  lambda 0.245  8749 ms/batch
+  ep 3 batch 175/198  spoof_loss 0.0315  lang_loss 1.1649  lambda 0.250  8395 ms/batch
+ep  3  spoof_loss 0.0322  lang_loss 1.1554  dev EER 1.00%  dev lang-acc 51.2% (chance=33.3%)  (lang:bn=1.51 lang:hi=1.04 lang:ta=0.19 codec:clean=1.04 codec:whatsapp=1.04)  1763s
+  ep 4 batch 25/198  spoof_loss 0.0346  lang_loss 1.0578  lambda 0.259  6077 ms/batch
+  ep 4 batch 50/198  spoof_loss 0.0270  lang_loss 1.0520  lambda 0.262  6479 ms/batch
+  ep 4 batch 75/198  spoof_loss 0.0223  lang_loss 1.0526  lambda 0.266  6615 ms/batch
+  ep 4 batch 100/198  spoof_loss 0.0232  lang_loss 1.0559  lambda 0.269  7054 ms/batch
+  ep 4 batch 125/198  spoof_loss 0.0244  lang_loss 1.0549  lambda 0.272  7879 ms/batch
+  ep 4 batch 150/198  spoof_loss 0.0247  lang_loss 1.0548  lambda 0.275  8588 ms/batch
+  ep 4 batch 175/198  spoof_loss 0.0238  lang_loss 1.0545  lambda 0.277  9168 ms/batch
+ep  4  spoof_loss 0.0244  lang_loss 1.0572  dev EER 0.63%  dev lang-acc 57.1% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  2160s
+  ep 5 batch 25/198  spoof_loss 0.0342  lang_loss 1.0828  lambda 0.281  8431 ms/batch
+  ep 5 batch 50/198  spoof_loss 0.0353  lang_loss 1.0800  lambda 0.283  9164 ms/batch
+  ep 5 batch 75/198  spoof_loss 0.0352  lang_loss 1.0856  lambda 0.285  9832 ms/batch
+  ep 5 batch 100/198  spoof_loss 0.0300  lang_loss 1.0851  lambda 0.286  10347 ms/batch
+  ep 5 batch 125/198  spoof_loss 0.0272  lang_loss 1.0882  lambda 0.288  10660 ms/batch
+  ep 5 batch 150/198  spoof_loss 0.0254  lang_loss 1.0951  lambda 0.289  10894 ms/batch
+  ep 5 batch 175/198  spoof_loss 0.0239  lang_loss 1.0945  lambda 0.290  11144 ms/batch
+ep  5  spoof_loss 0.0235  lang_loss 1.0926  dev EER 0.63%  dev lang-acc 52.3% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.96 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  2569s
+  ep 6 batch 25/198  spoof_loss 0.0079  lang_loss 1.0622  lambda 0.292  7025 ms/batch
+  ep 6 batch 50/198  spoof_loss 0.0133  lang_loss 1.0604  lambda 0.293  5372 ms/batch
+  ep 6 batch 75/198  spoof_loss 0.0112  lang_loss 1.0653  lambda 0.293  4731 ms/batch
+  ep 6 batch 100/198  spoof_loss 0.0126  lang_loss 1.0744  lambda 0.294  4479 ms/batch
+  ep 6 batch 125/198  spoof_loss 0.0143  lang_loss 1.0780  lambda 0.295  4233 ms/batch
+  ep 6 batch 150/198  spoof_loss 0.0148  lang_loss 1.0802  lambda 0.295  4065 ms/batch
+  ep 6 batch 175/198  spoof_loss 0.0146  lang_loss 1.0820  lambda 0.296  3952 ms/batch
+ep  6  spoof_loss 0.0152  lang_loss 1.0823  dev EER 0.63%  dev lang-acc 54.0% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.48 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  850s
+  ep 7 batch 25/198  spoof_loss 0.0075  lang_loss 1.0874  lambda 0.296  3281 ms/batch
+  ep 7 batch 50/198  spoof_loss 0.0082  lang_loss 1.0886  lambda 0.297  3278 ms/batch
+  ep 7 batch 75/198  spoof_loss 0.0081  lang_loss 1.0868  lambda 0.297  3290 ms/batch
+  ep 7 batch 100/198  spoof_loss 0.0083  lang_loss 1.0882  lambda 0.297  3274 ms/batch
+  ep 7 batch 125/198  spoof_loss 0.0103  lang_loss 1.0896  lambda 0.298  3257 ms/batch
+  ep 7 batch 150/198  spoof_loss 0.0111  lang_loss 1.0886  lambda 0.298  3263 ms/batch
+  ep 7 batch 175/198  spoof_loss 0.0108  lang_loss 1.0898  lambda 0.298  3263 ms/batch
+ep  7  spoof_loss 0.0108  lang_loss 1.0901  dev EER 0.52%  dev lang-acc 44.2% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.52)  730s
+  ep 8 batch 25/198  spoof_loss 0.0132  lang_loss 1.0948  lambda 0.298  3293 ms/batch
+  ep 8 batch 50/198  spoof_loss 0.0100  lang_loss 1.0908  lambda 0.299  3290 ms/batch
+  ep 8 batch 75/198  spoof_loss 0.0109  lang_loss 1.0876  lambda 0.299  3310 ms/batch
+  ep 8 batch 100/198  spoof_loss 0.0116  lang_loss 1.0892  lambda 0.299  3297 ms/batch
+  ep 8 batch 125/198  spoof_loss 0.0104  lang_loss 1.0875  lambda 0.299  3301 ms/batch
+  ep 8 batch 150/198  spoof_loss 0.0102  lang_loss 1.0846  lambda 0.299  3298 ms/batch
+  ep 8 batch 175/198  spoof_loss 0.0095  lang_loss 1.0834  lambda 0.299  3289 ms/batch
+ep  8  spoof_loss 0.0091  lang_loss 1.0821  dev EER 0.89%  dev lang-acc 48.8% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.74 codec:whatsapp=1.04)  733s
+  ep 9 batch 25/198  spoof_loss 0.0037  lang_loss 1.0811  lambda 0.299  3202 ms/batch
+  ep 9 batch 50/198  spoof_loss 0.0030  lang_loss 1.0765  lambda 0.299  3212 ms/batch
+  ep 9 batch 75/198  spoof_loss 0.0048  lang_loss 1.0773  lambda 0.299  3211 ms/batch
+  ep 9 batch 100/198  spoof_loss 0.0074  lang_loss 1.0774  lambda 0.299  3214 ms/batch
+  ep 9 batch 125/198  spoof_loss 0.0078  lang_loss 1.0773  lambda 0.300  3221 ms/batch
+  ep 9 batch 150/198  spoof_loss 0.0076  lang_loss 1.0785  lambda 0.300  3226 ms/batch
+  ep 9 batch 175/198  spoof_loss 0.0077  lang_loss 1.0777  lambda 0.300  3233 ms/batch
+ep  9  spoof_loss 0.0073  lang_loss 1.0765  dev EER 0.63%  dev lang-acc 54.7% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.56 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  726s
+  ep 10 batch 25/198  spoof_loss 0.0060  lang_loss 1.0798  lambda 0.300  3278 ms/batch
+  ep 10 batch 50/198  spoof_loss 0.0057  lang_loss 1.0743  lambda 0.300  3361 ms/batch
+  ep 10 batch 75/198  spoof_loss 0.0053  lang_loss 1.0710  lambda 0.300  3313 ms/batch
+  ep 10 batch 100/198  spoof_loss 0.0061  lang_loss 1.0687  lambda 0.300  3287 ms/batch
+  ep 10 batch 125/198  spoof_loss 0.0058  lang_loss 1.0669  lambda 0.300  3283 ms/batch
+  ep 10 batch 150/198  spoof_loss 0.0055  lang_loss 1.0684  lambda 0.300  3276 ms/batch
+  ep 10 batch 175/198  spoof_loss 0.0052  lang_loss 1.0687  lambda 0.300  3271 ms/batch
+ep 10  spoof_loss 0.0049  lang_loss 1.0668  dev EER 0.63%  dev lang-acc 54.1% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.76 lang:ta=0.00 codec:clean=0.52 codec:whatsapp=0.74)  731s
+  ep 11 batch 25/198  spoof_loss 0.0074  lang_loss 1.0721  lambda 0.300  3232 ms/batch
+  ep 11 batch 50/198  spoof_loss 0.0047  lang_loss 1.0701  lambda 0.300  3230 ms/batch
+  ep 11 batch 75/198  spoof_loss 0.0041  lang_loss 1.0698  lambda 0.300  3301 ms/batch
+  ep 11 batch 100/198  spoof_loss 0.0039  lang_loss 1.0700  lambda 0.300  3282 ms/batch
+  ep 11 batch 125/198  spoof_loss 0.0039  lang_loss 1.0698  lambda 0.300  3278 ms/batch
+  ep 11 batch 150/198  spoof_loss 0.0038  lang_loss 1.0706  lambda 0.300  3269 ms/batch
+  ep 11 batch 175/198  spoof_loss 0.0035  lang_loss 1.0703  lambda 0.300  3270 ms/batch
+ep 11  spoof_loss 0.0038  lang_loss 1.0694  dev EER 0.52%  dev lang-acc 54.1% (chance=33.3%)  (lang:bn=1.51 lang:hi=0.48 lang:ta=0.00 codec:clean=0.22 codec:whatsapp=0.74)  727s
+early stop (no dev EER improvement for 4 epochs)
+
+best dev EER 0.52% at epoch 7  ->  model_indic_ft_agnostic.safetensors

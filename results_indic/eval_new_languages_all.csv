@@ -1,0 +1,6 @@
+lang,lname,n,n_real,n_fake,TP,FN,FP,TN,accuracy_pct,own_threshold_eer_pct,fixed_threshold
+kn,Kannada,500,250,250,248,2,1,249,99.40,0.40,-1.0212
+mr,Marathi,500,250,250,249,1,0,250,99.80,0.00,-1.0212
+pa,Punjabi,500,250,250,242,8,0,250,98.40,0.00,-1.0212
+sa,Sanskrit,500,250,250,243,7,12,238,96.20,4.80,-1.0212
+te,Telugu,500,250,250,242,8,0,250,98.40,0.00,-1.0212
