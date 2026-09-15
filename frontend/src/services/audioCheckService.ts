@@ -95,6 +95,9 @@ export async function analyseAudio(
   onEvent: (event: AudioCheckEvent) => void,
   signal: AbortSignal,
 ): Promise<void> {
+  if (!BACKEND_HTTP) {
+    throw new Error('No detection backend is configured for this deployment yet.');
+  }
   let response: Response;
   try {
     response = await fetch(`${BACKEND_HTTP}/analyse?name=${encodeURIComponent(name)}`, {

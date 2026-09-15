@@ -1,11 +1,21 @@
 /**
  * Where the detection backend (call-monitor/backend) lives.
- * Defaults to port 8000 on the host serving this page; override with
- * VITE_BACKEND_URL, e.g. VITE_BACKEND_URL=http://192.168.1.20:8000.
+ *
+ * With no VITE_BACKEND_URL, this only guesses a same-host address when the
+ * page itself is loaded over plain HTTP (local dev, LAN demo box) — there,
+ * "same host, port 8000" is a reasonable default. On an HTTPS deployment
+ * (Vercel, etc.) an unset VITE_BACKEND_URL means no backend is hosted yet,
+ * so BACKEND_HTTP is left null: guessing `http://<page-host>:8000` would
+ * build a `ws://` monitor URL that the browser blocks as mixed content on an
+ * https page, and a plain `http://` fetch to it would equally be blocked.
+ * Every caller (detectionFeed, AudioCheck, ...) already handles a missing
+ * backend by falling back to the simulated demo.
  */
-export const BACKEND_HTTP: string = (
-  import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname || 'localhost'}:8000`
-).replace(/\/$/, '');
+export const BACKEND_HTTP: string | null = import.meta.env.VITE_BACKEND_URL
+  ? import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '')
+  : window.location.protocol === 'http:'
+    ? `http://${window.location.hostname || 'localhost'}:8000`
+    : null;
 
 /**
  * The desktop capture client's local control API (client/control_server.py).

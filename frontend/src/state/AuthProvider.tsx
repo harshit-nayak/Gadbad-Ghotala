@@ -18,19 +18,28 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** Where to return after Google sends the user back (the OAuth redirect drops the #/route). */
 const RETURN_KEY = 'gg.auth.returnTo';
 
-/** Reads ?error / ?code left by the OAuth redirect, then removes them without disturbing the #/route. */
+/**
+ * Restores the pre-login #/route saved by signInWithGoogle, and reads any
+ * ?error left by the OAuth redirect.
+ *
+ * Keyed off sessionStorage, not a `?code=` param: supabase-js's own
+ * detectSessionInUrl strips `?code=` from the URL as part of resolving
+ * getSession()'s promise, which runs before this does — checking for it here
+ * would almost always see it already gone. The RETURN_KEY's presence is what
+ * actually marks "we're back from a redirect".
+ */
 function takeRedirectParams(): string | null {
   const params = new URLSearchParams(window.location.search);
   const error = params.get('error_description') || params.get('error');
-  if (params.has('code') || error) {
-    let hash = window.location.hash;
-    try {
-      hash = window.sessionStorage.getItem(RETURN_KEY) || hash;
-      window.sessionStorage.removeItem(RETURN_KEY);
-    } catch {
-      // storage blocked: land on the default route
-    }
-    window.history.replaceState(null, '', `${window.location.pathname}${hash}`);
+  let savedHash: string | null = null;
+  try {
+    savedHash = window.sessionStorage.getItem(RETURN_KEY);
+    window.sessionStorage.removeItem(RETURN_KEY);
+  } catch {
+    // storage blocked: land on the default route
+  }
+  if (savedHash !== null || error) {
+    window.history.replaceState(null, '', `${window.location.pathname}${savedHash ?? window.location.hash}`);
   }
   return error;
 }

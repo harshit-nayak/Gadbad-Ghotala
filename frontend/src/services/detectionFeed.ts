@@ -57,7 +57,9 @@ export interface DetectionFeedState {
   handledSessionId: string | null;
 }
 
-const FEED_URL: string = import.meta.env.VITE_DETECTION_WS || `${BACKEND_HTTP.replace(/^http/, 'ws')}/ws/monitor`;
+/** null when no backend is configured/guessable (see BACKEND_HTTP) — the feed then stays 'offline' and never opens a socket. */
+const FEED_URL: string | null =
+  import.meta.env.VITE_DETECTION_WS || (BACKEND_HTTP ? `${BACKEND_HTTP.replace(/^http/, 'ws')}/ws/monitor` : null);
 const RETRY_MS = [1000, 2000, 5000];
 
 let state: DetectionFeedState = { connection: 'connecting', detector: null, session: null, handledSessionId: null };
@@ -114,6 +116,10 @@ function handle(message: { type?: string; [key: string]: unknown }) {
 }
 
 function connect() {
+  if (!FEED_URL) {
+    set({ connection: 'offline' });
+    return;
+  }
   set({ connection: attempt === 0 ? 'connecting' : state.connection });
   const ws = new WebSocket(FEED_URL);
   socket = ws;
@@ -143,7 +149,7 @@ function subscribe(listener: () => void) {
 }
 
 export const detectionFeed = {
-  url: FEED_URL,
+  url: FEED_URL ?? undefined,
   getSnapshot: () => state,
   subscribe,
   markHandled: (sessionId: string) => set({ handledSessionId: sessionId }),
