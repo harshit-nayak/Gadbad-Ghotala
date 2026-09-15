@@ -1,0 +1,9 @@
+# Second detector: AntiDeepfake MMS-300M (see app/antideepfake.py).
+# Optional -- without these the backend runs on XLSR-SLS alone, as before.
+# CPU-only PyTorch; on Windows the PyPI wheel is already CPU, the extra index
+# keeps Linux from pulling a multi-GB CUDA build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+transformers>=4.40
+safetensors>=0.4
+huggingface_hub>=0.20

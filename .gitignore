@@ -1,0 +1,46 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node / frontend ----
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# ---- Secrets / local config ----
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---- Model weights (multi-GB; re-fetched by the scripts in each README) ----
+*.onnx
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.bin
+
+# ---- Datasets ----
+deepfake/flac_D_ac/
+deepfake/*.tar
+deepfake/ASVspoof5.*.tsv
+
+# ---- Captured call audio: real people's voices, never commit ----
+call-monitor/backend/recordings/
+data/
+voice-player/playlog.csv
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp

@@ -1,0 +1,6 @@
+sounddevice>=0.4.6
+# 0.12+ wheels bundle libsndfile 1.1+, which reads MP3 as well as WAV/FLAC/OGG.
+soundfile>=0.12
+numpy>=1.26
+# Band-limited resampling to the output device's mix rate (resample_poly).
+scipy>=1.10

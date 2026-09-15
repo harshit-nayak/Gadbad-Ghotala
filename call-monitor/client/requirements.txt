@@ -1,0 +1,10 @@
+PyAudioWPatch>=0.2.12.7
+numpy>=1.26
+websocket-client>=1.7
+pycaw>=20240210
+comtypes>=1.2
+
+# Anti-aliased resampling (scipy.signal.resample_poly). Without it, capture at
+# 48 kHz is decimated to 16 kHz with no lowpass and everything above 8 kHz
+# folds back into the band the detector analyses -- see resample.py.
+scipy>=1.10

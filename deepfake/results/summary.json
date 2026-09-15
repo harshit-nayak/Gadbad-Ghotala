@@ -1,0 +1,25 @@
+{
+  "model": "xlsr-sls.onnx",
+  "folder": "flac_D_ac\\flac_D",
+  "n_scored": 1500,
+  "class_counts": {
+    "genuine": 750,
+    "fake": 750
+  },
+  "threshold": 0.5,
+  "crop": "start",
+  "normalize": false,
+  "confusion": {
+    "fake_caught": 749,
+    "fake_missed": 1,
+    "genuine_ok": 577,
+    "genuine_flagged_fake": 173
+  },
+  "accuracy": 0.884,
+  "eer_percent": 1.467,
+  "eer_threshold_p_genuine": 0.0,
+  "mean_p_genuine": {
+    "genuine_clips": 0.7548,
+    "fake_clips": 0.0014
+  }
+}

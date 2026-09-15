@@ -1,0 +1,6 @@
+conformer_head_only.safetensors and MODEL_CARD.md come from the PRIVATE repo
+  https://github.com/harshit-nayak/Gadbad-Ghotala  (branch XLSR_MAMBA_FINETUNED,
+  commit 27a1e33, 2026-09-11) -> release/xlsr-mamba-indic-ft-lite.zip
+model_base.safetensors is the public base checkpoint
+  https://huggingface.co/AustinXiao/XLSR-Mamba-LA  (MIT)  -- scripts/fetch_xlsr_mamba.py
+The Indic model = base with its 129 conformer.* tensors replaced by the head file.

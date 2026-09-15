@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+numpy>=1.26
+websockets>=12.0
+
+# Runs both the XLSR-SLS detector and the Silero VAD. For an Intel Arc iGPU use
+# onnxruntime-openvino instead and set MODEL_PROVIDER=openvino (fp16 -- re-check
+# your thresholds, scores shift slightly vs CPU fp32).
+onnxruntime>=1.17
