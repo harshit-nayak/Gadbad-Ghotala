@@ -1,0 +1,204 @@
+/* ---------------------------------------------------------------------------
+   Hero: one layered canvas. No grid columns, no image card, no text card.
+   Layer order: photograph -> ivory dissolve -> grain/stipple -> type -> read-out.
+--------------------------------------------------------------------------- */
+.gghero {
+  position: relative;
+  height: min(88vh, 880px);
+  min-height: 620px;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--ivory);
+}
+
+/* --- Canvas --- */
+.gghero__canvas { position: absolute; inset: 0; z-index: 0; }
+.gghero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.62) contrast(1.05) brightness(0.99) sepia(0.12);
+}
+/* The page dissolves the photograph rather than cropping it into a rectangle. */
+.gghero__dissolve {
+  position: absolute;
+  inset: 0;
+  background: var(--ivory);
+  -webkit-mask-image: linear-gradient(97deg, #000 0%, #000 26%, rgb(0 0 0 / 0.82) 38%, rgb(0 0 0 / 0.28) 52%, transparent 62%);
+  mask-image: linear-gradient(97deg, #000 0%, #000 26%, rgb(0 0 0 / 0.82) 38%, rgb(0 0 0 / 0.28) 52%, transparent 62%);
+}
+/* Second, vertical dissolve so the photo also melts into the section edges. */
+.gghero__canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(245 241 232 / 0.55) 0%, transparent 22%, transparent 62%, rgb(23 26 23 / 0.28) 100%);
+}
+.gghero__grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='h'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23h)' opacity='0.6'/%3E%3C/svg%3E");
+  opacity: 0.26;
+  mix-blend-mode: multiply;
+}
+/* Ink stipple, dense at the lower left, gone by the centre. */
+.gghero__stipple {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgb(104 116 90 / 0.55) 0.9px, transparent 1.15px);
+  background-size: 7px 7px;
+  -webkit-mask-image: radial-gradient(72% 78% at -6% 96%, #000 0%, transparent 64%);
+  mask-image: radial-gradient(72% 78% at -6% 96%, #000 0%, transparent 64%);
+  opacity: 0.6;
+}
+
+/* --- Editorial marks --- */
+.gghero__marker {
+  position: absolute;
+  top: clamp(96px, 13vh, 150px);
+  right: clamp(var(--space-6), 6vw, 104px);
+  z-index: 2;
+  font-size: clamp(4rem, 8vw, 8.5rem);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  font-variation-settings: 'wdth' 72;
+  color: rgb(245 241 232 / 0.34);
+  mix-blend-mode: soft-light;
+}
+.gghero__vertical {
+  position: absolute;
+  right: clamp(var(--space-4), 2.4vw, 34px);
+  bottom: clamp(140px, 22vh, 230px);
+  z-index: 2;
+  writing-mode: vertical-rl;
+  color: rgb(245 241 232 / 0.72);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+/* --- Type, placed on the canvas --- */
+.gghero__type {
+  position: absolute;
+  left: clamp(var(--space-5), 5vw, 92px);
+  top: clamp(112px, 16vh, 168px);
+  bottom: clamp(var(--space-6), 7vh, 76px);
+  z-index: 3;
+  width: min(72vw, 1000px);
+  display: flex;
+  flex-direction: column;
+}
+.gghero__kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--olive);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.gghero__rule { width: 42px; height: 1px; background: currentColor; opacity: 0.55; }
+.gghero__headline {
+  margin-top: clamp(var(--space-4), 2.4vh, var(--space-6));
+  font-size: clamp(3.2rem, 7.4vw, 7.4rem);
+  line-height: 0.88;
+  letter-spacing: -0.052em;
+  font-variation-settings: 'wdth' 72;
+  color: var(--charcoal);
+  text-wrap: nowrap;
+}
+.gghero__headline span { display: block; }
+/* Staggered indents: the composition steps into the photograph. */
+.gghero__headline .l2 { margin-left: clamp(24px, 5vw, 92px); color: var(--forest); }
+.gghero__headline .l3 { margin-left: clamp(48px, 10vw, 184px); }
+.gghero__foot {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(var(--space-5), 4vw, 64px);
+  flex-wrap: wrap;
+  max-width: 880px;
+}
+.gghero__lede {
+  max-width: 34ch;
+  color: var(--ink-muted);
+  font-size: clamp(1rem, 1.15vw, 1.14rem);
+  line-height: 1.55;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+}
+.gghero__actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.gghero__actions .btn { height: 54px; padding: 0 var(--space-5); font-size: 0.98rem; }
+
+/* --- Call read-out: pinned to the canvas edge, small, clear of the subject --- */
+.gghero__readout {
+  position: absolute;
+  right: clamp(var(--space-6), 7vw, 118px);
+  bottom: 0;
+  z-index: 3;
+  width: min(258px, 30vw);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  background: rgb(23 26 23 / 0.9);
+  backdrop-filter: blur(7px);
+  color: var(--ivory);
+  border-top: 2px solid var(--danger);
+  animation: hero-readout 820ms var(--ease-out) both 260ms;
+}
+@keyframes hero-readout { from { opacity: 0; transform: translateY(24px); } }
+.gghero__readout-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgb(245 241 232 / 0.62);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.gghero__live {
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse-dot 1.9s var(--ease-out) infinite;
+}
+.gghero__caller { margin-top: var(--space-3); font-size: 1.18rem; font-weight: 650; letter-spacing: -0.02em; }
+.gghero__role { color: rgb(245 241 232 / 0.6); font-size: 0.78rem; }
+.gghero__facts { display: grid; gap: var(--space-3); margin: var(--space-4) 0; padding-top: var(--space-4); border-top: 1px solid rgb(245 241 232 / 0.16); }
+.gghero__facts dt { color: rgb(245 241 232 / 0.55); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.17em; text-transform: uppercase; }
+.gghero__facts dd { margin-top: 2px; font-size: 0.92rem; font-weight: 600; }
+.gghero__facts dd.is-high { color: #e2806e; font-size: 1.24rem; font-weight: 700; letter-spacing: -0.02em; }
+.gghero__verify {
+  color: var(--danger);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1080px) {
+  .gghero { height: auto; min-height: 0; padding-bottom: var(--space-8); }
+  .gghero__canvas { position: relative; height: 54vh; }
+  .gghero__dissolve {
+    -webkit-mask-image: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.6) 78%, #000 100%);
+    mask-image: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.6) 78%, #000 100%);
+  }
+  .gghero__type {
+    position: relative;
+    inset: auto;
+    width: auto;
+    margin: calc(var(--space-7) * -1) clamp(var(--space-5), 5vw, 60px) 0;
+  }
+  .gghero__headline { text-wrap: wrap; font-size: clamp(2.8rem, 10vw, 4.4rem); }
+  .gghero__headline .l2, .gghero__headline .l3 { margin-left: 0; }
+  .gghero__foot { margin-top: var(--space-6); }
+  .gghero__readout { position: relative; right: auto; width: auto; margin: var(--space-6) clamp(var(--space-5), 5vw, 60px) 0; }
+  .gghero__marker { top: var(--space-5); right: var(--space-5); }
+  .gghero__vertical { display: none; }
+}

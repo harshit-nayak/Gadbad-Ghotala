@@ -1,0 +1,370 @@
+/* The product font's middle dot sits off-centre; borrow it from the system font. */
+@font-face {
+  font-family: 'GG Punctuation';
+  src: local('Arial'), local('Helvetica Neue'), local('Helvetica'), local('Segoe UI'), local('DejaVu Sans'), local('Liberation Sans');
+  unicode-range: U+00B7;
+}
+
+/*
+ * GG design tokens.
+ * Raw palette lives on :root. Components must use the semantic tokens,
+ * which change per product area via [data-theme].
+ */
+
+:root {
+  /* Palette */
+  /* GG master palette: ivory, charcoal, forest, olive, amber, red */
+  --ivory: #f5f1e8;
+  --stone: #e9e4d8;
+  --paper: #ffffff;
+  --charcoal: #171a17;
+  --forest: #30483a;
+  --forest-700: #26392e;
+  --forest-400: #567a63;
+  --olive: #68745a;
+  --olive-300: #9aa38c;
+  --amber: #d49a52;
+  --amber-700: #9a6a2b;
+  --danger: #b84a3a;
+  --danger-700: #8f3729;
+  --hairline: #cfc8b9;
+  --tint-green: #e7eee8;
+  --tint-amber: #f4ebdd;
+  --tint-red: #f7e7e3;
+
+  --plum-950: #1d1524;
+  --plum-900: #2a1f33;
+  --plum-800: #3b2d47;
+  --plum-600: #5f4d6e;
+  --plum-400: #938599;
+  --plum-200: #dcd3e0;
+  --plum-100: #eee8f1;
+  --plum-50: #f8f4f9;
+
+  --rose-50: #fff2f6;
+  --rose-100: #ffe1eb;
+  --rose-200: #fbc3d6;
+  --rose-400: #ec6d98;
+  --rose-500: #d6336c;
+  --rose-600: #b8245a;
+  --rose-700: #921c48;
+
+  --lilac-50: #f5f2fe;
+  --lilac-100: #e9e3fd;
+  --lilac-300: #c3b5f8;
+  --lilac-500: #8f77ec;
+  --lilac-600: #7359d6;
+  --lilac-700: #5a43b3;
+
+  --red-50: #fef3f2;
+  --red-100: #fee4e2;
+  --red-200: #fdcdc9;
+  --red-400: #f26b61;
+  --red-500: #e0352b;
+  --red-600: #c4271d;
+  --red-700: #9b1c15;
+
+  --amber-50: #fff8eb;
+  --amber-100: #fdecc8;
+  --amber-400: #f0a53a;
+  --amber-600: #a36204;
+  --amber-700: #82500a;
+
+  --green-50: #eefbf4;
+  --green-100: #d3f3e1;
+  --green-400: #4cc38a;
+  --green-500: #15925f;
+  --green-600: #0f7a4e;
+  --green-700: #0b5e3c;
+
+  /* Type: one family, width axis carries hierarchy */
+  --font-sans: 'GG Punctuation', 'Anek Devanagari Variable', 'Nirmala UI', system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.3125rem;
+  --text-2xl: 1.625rem;
+  --text-3xl: 2.25rem;
+  --width-display: 88;
+  --width-body: 100;
+  --leading-tight: 1.15;
+  --leading-body: 1.45;
+
+  /* Space (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* Radius: scaled by hierarchy, not one value everywhere */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-device: 34px;
+  --radius-full: 999px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+
+  /* Viz defaults (light); themes override */
+  --chart-1: var(--forest);
+  --chart-2: var(--olive);
+  --chart-3: var(--olive-300);
+  --chart-4: var(--amber);
+  --sig-voice: #3f6b4f;
+  --sig-synthetic: #b84a3a;
+  --sig-context: #b8863c;
+  --sig-prosody: #6b8a93;
+  --sig-codec: #8c7f4f;
+  --sig-noise: #7c8175;
+  --sig-watermark: #b6b2a4;
+  --wave-caller: var(--forest);
+  --wave-employee: var(--olive-300);
+  --wave-idle: #ded8ca;
+}
+
+/* Employee: light, blush field, reassuring */
+[data-theme='employee'] {
+  --bg: var(--ivory);
+  --bg-glow-a: rgb(48 72 58 / 0.05);
+  --bg-glow-b: rgb(212 154 82 / 0.05);
+  --surface: var(--paper);
+  --surface-sunken: #faf8f3;
+  --glass: rgb(255 255 255 / 0.86);
+  --glass-line: var(--hairline);
+  --line: #e4ded1;
+  --line-strong: var(--hairline);
+  --ink: var(--charcoal);
+  --ink-muted: #5c6157;
+  --ink-subtle: #8a8b80;
+  --action: var(--forest);
+  --action-hover: var(--forest-700);
+  --action-ink: var(--paper);
+  --brand: var(--forest);
+  --brand-soft: var(--tint-green);
+  --brand-line: #cfdcd2;
+  --analysis: var(--forest-400);
+  --analysis-soft: var(--tint-green);
+  --analysis-line: #cfdcd2;
+  --risk: var(--danger);
+  --risk-strong: var(--danger-700);
+  --risk-soft: var(--tint-red);
+  --risk-line: #eccfc8;
+  --warn: var(--amber-700);
+  --warn-soft: var(--tint-amber);
+  --warn-line: #e8d6b8;
+  --safe: var(--forest);
+  --safe-soft: var(--tint-green);
+  --safe-line: #cfdcd2;
+  --focus: var(--forest-400);
+  --shadow-raised: 0 1px 2px rgb(23 26 23 / 0.05), 0 6px 18px -12px rgb(23 26 23 / 0.18);
+  --shadow-device: 0 24px 60px -32px rgb(23 26 23 / 0.28);
+  --chart-1: var(--forest);
+  --chart-2: var(--olive);
+  --chart-3: var(--olive-300);
+  --chart-4: var(--amber);
+  --wave-caller: var(--forest);
+  --wave-employee: var(--olive-300);
+  --wave-idle: #ded8ca;
+  color-scheme: light;
+}
+
+/* Landing and login: ivory paper, forest ink, amber accent */
+[data-theme='landing'] {
+  --bg: var(--ivory);
+  --bg-glow-a: rgb(48 72 58 / 0.05);
+  --bg-glow-b: rgb(212 154 82 / 0.05);
+  --surface: var(--paper);
+  --surface-sunken: #f1ece1;
+  --glass: rgb(255 255 255 / 0.82);
+  --glass-line: rgb(207 200 185 / 0.8);
+  --line: #e2dccf;
+  --line-strong: var(--hairline);
+  --ink: var(--charcoal);
+  --ink-muted: #5c6157;
+  --ink-subtle: #87887d;
+  --action: var(--charcoal);
+  --action-hover: #000;
+  --action-ink: var(--paper);
+  --brand: var(--forest);
+  --brand-soft: var(--tint-green);
+  --brand-line: #cfdcd2;
+  --accent: var(--amber-700);
+  --accent-soft: var(--tint-amber);
+  --analysis: var(--forest-400);
+  --analysis-soft: var(--tint-green);
+  --analysis-line: #cfdcd2;
+  --risk: var(--danger);
+  --risk-strong: var(--danger-700);
+  --risk-soft: var(--tint-red);
+  --risk-line: #eccfc8;
+  --warn: var(--amber-700);
+  --warn-soft: var(--tint-amber);
+  --warn-line: #e8d6b8;
+  --safe: var(--forest);
+  --safe-soft: var(--tint-green);
+  --safe-line: #cfdcd2;
+  --focus: var(--forest-400);
+  --shadow-raised: 0 1px 2px rgb(23 26 23 / 0.04), 0 8px 24px -16px rgb(23 26 23 / 0.2);
+  --shadow-float: 0 18px 44px -28px rgb(23 26 23 / 0.28);
+  --shadow-device: 0 24px 60px -30px rgb(23 26 23 / 0.25);
+  --chart-1: var(--forest);
+  color-scheme: light;
+}
+
+/* Security / Fraud: dark charcoal console, forest and amber signals */
+[data-theme='security'] {
+  --bg: #12140f;
+  --bg-glow-a: rgb(86 122 99 / 0.05);
+  --bg-glow-b: rgb(212 154 82 / 0.04);
+  --surface: #1a1d18;
+  --surface-sunken: #161812;
+  --line: #2a2e26;
+  --line-strong: #3b4036;
+  --ink: #eceadf;
+  --ink-muted: #aaac9f;
+  --ink-subtle: #7b7d72;
+  --action: var(--forest-400);
+  --action-hover: #66906f;
+  --action-ink: #0d0f0b;
+  --brand: #8fb89a;
+  --brand-soft: rgb(86 122 99 / 0.16);
+  --brand-line: rgb(86 122 99 / 0.34);
+  --analysis: #8fb89a;
+  --analysis-soft: rgb(86 122 99 / 0.15);
+  --analysis-line: rgb(86 122 99 / 0.32);
+  --risk: #d9705c;
+  --risk-strong: #e88a77;
+  --risk-soft: rgb(184 74 58 / 0.16);
+  --risk-line: rgb(184 74 58 / 0.36);
+  --warn: var(--amber);
+  --warn-soft: rgb(212 154 82 / 0.15);
+  --warn-line: rgb(212 154 82 / 0.34);
+  --safe: #6fae80;
+  --safe-soft: rgb(111 174 128 / 0.14);
+  --safe-line: rgb(111 174 128 / 0.32);
+  --focus: #8fb89a;
+  --shadow-raised: 0 1px 0 rgb(255 255 255 / 0.02) inset, 0 10px 28px -20px rgb(0 0 0 / 0.8);
+  --shadow-device: 0 30px 70px -30px rgb(0 0 0 / 0.7);
+  --chart-1: #6f9c7c;
+  --chart-2: #8a8f70;
+  --chart-3: #4a5344;
+  --chart-4: var(--amber);
+  --sig-voice: #7fae8c;
+  --sig-synthetic: #d9705c;
+  --sig-context: #d4a05e;
+  --sig-prosody: #8fa3b0;
+  --sig-codec: #a99a6b;
+  --sig-noise: #7c8175;
+  --sig-watermark: #4d5247;
+  --wave-caller: #8fb89a;
+  --wave-employee: #6e7468;
+  --wave-idle: #2d322a;
+  --tip-bg: #0a0c08;
+  --row-live: rgb(184 74 58 / 0.08);
+  --side-bg: #15170f;
+  --nav-active-bg: rgb(86 122 99 / 0.16);
+  --map-dot: #2b3029;
+  --table-head: #171a14;
+  color-scheme: dark;
+}
+
+/* Documents: warm paper, forest accent */
+[data-theme='documents'] {
+  --bg: #f7f4ec;
+  --bg-glow-a: rgb(48 72 58 / 0.04);
+  --bg-glow-b: rgb(212 154 82 / 0.04);
+  --surface: var(--paper);
+  --surface-sunken: #f3efe5;
+  --line: #e5e0d3;
+  --line-strong: var(--hairline);
+  --ink: var(--charcoal);
+  --ink-muted: #5c6157;
+  --ink-subtle: #8a8b80;
+  --action: var(--forest);
+  --action-hover: var(--forest-700);
+  --action-ink: var(--paper);
+  --brand: var(--forest);
+  --brand-soft: var(--tint-green);
+  --brand-line: #cfdcd2;
+  --analysis: var(--olive);
+  --analysis-soft: #eef0e7;
+  --analysis-line: #dcdfd0;
+  --risk: var(--danger);
+  --risk-strong: var(--danger-700);
+  --risk-soft: var(--tint-red);
+  --risk-line: #eccfc8;
+  --warn: var(--amber-700);
+  --warn-soft: var(--tint-amber);
+  --warn-line: #e8d6b8;
+  --safe: var(--forest);
+  --safe-soft: var(--tint-green);
+  --safe-line: #cfdcd2;
+  --focus: var(--forest-400);
+  --shadow-raised: 0 1px 2px rgb(23 26 23 / 0.04), 0 6px 18px -12px rgb(23 26 23 / 0.16);
+  --shadow-device: 0 24px 60px -30px rgb(23 26 23 / 0.25);
+  --chart-1: var(--forest);
+  --side-bg: #faf7f0;
+  --nav-active-bg: var(--tint-green);
+  --nav-active-ink: var(--forest-700);
+  color-scheme: light;
+}
+
+/* Administrator: ivory analytics, forest and olive data */
+[data-theme='admin'] {
+  --bg: var(--ivory);
+  --bg-glow-a: rgb(48 72 58 / 0.05);
+  --bg-glow-b: rgb(104 116 90 / 0.05);
+  --surface: var(--paper);
+  --surface-sunken: #f7f4ea;
+  --line: #e4dfd2;
+  --line-strong: var(--hairline);
+  --ink: var(--charcoal);
+  --ink-muted: #565b52;
+  --ink-subtle: #86877c;
+  --action: var(--forest);
+  --action-hover: var(--forest-700);
+  --action-ink: var(--paper);
+  --brand: var(--forest);
+  --brand-soft: var(--tint-green);
+  --brand-line: #cfdcd2;
+  --analysis: var(--forest);
+  --analysis-soft: var(--tint-green);
+  --analysis-line: #cfdcd2;
+  --risk: var(--danger);
+  --risk-strong: var(--danger-700);
+  --risk-soft: var(--tint-red);
+  --risk-line: #eccfc8;
+  --warn: var(--amber-700);
+  --warn-soft: var(--tint-amber);
+  --warn-line: #e8d6b8;
+  --safe: var(--forest);
+  --safe-soft: var(--tint-green);
+  --safe-line: #cfdcd2;
+  --focus: var(--forest-400);
+  --shadow-raised: 0 1px 2px rgb(23 26 23 / 0.04), 0 6px 18px -12px rgb(23 26 23 / 0.16);
+  --shadow-device: 0 24px 60px -30px rgb(23 26 23 / 0.25);
+  --chart-1: var(--forest);
+  --chart-2: var(--olive);
+  --chart-3: var(--olive-300);
+  --chart-4: var(--amber);
+  --side-bg: var(--paper);
+  --nav-active-bg: var(--tint-green);
+  --nav-active-ink: var(--forest-700);
+  --map-dot: #ded8c8;
+  --table-head: #faf8f1;
+  --row-live: var(--tint-amber);
+  color-scheme: light;
+}
+

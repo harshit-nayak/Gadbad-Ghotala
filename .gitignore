@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+dist/
+dist-ssr/
+*.local
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# downloaded photographs are fetched with `npm run fetch:images`
+# (kept out of git so the repo stays small; delete the next line to commit them)
+public/img/*.jpg
