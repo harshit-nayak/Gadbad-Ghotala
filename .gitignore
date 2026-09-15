@@ -35,7 +35,7 @@ deepfake/ASVspoof5.*.tsv
 
 # ---- Captured call audio: real people's voices, never commit ----
 call-monitor/backend/recordings/
-data/
+/data/
 voice-player/playlog.csv
 
 # ---- OS / editor ----
