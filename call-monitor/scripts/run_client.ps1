@@ -32,4 +32,14 @@ if (-not (Test-Path ".venv")) {
 # in the venv's absolute path at creation time, so they break the moment the
 # project folder is moved or renamed. python.exe keeps working, so this does too.
 & ".\.venv\Scripts\python.exe" -m pip install -q -r requirements.txt
-& ".\.venv\Scripts\python.exe" app.py
+
+# The control API only trusts pages served from localhost (it can start the
+# microphone). Let the deployed site drive this client too; override with
+# your own comma-separated list if the deployment URL changes.
+if (-not $env:CLIENT_CONTROL_ORIGINS) {
+    $env:CLIENT_CONTROL_ORIGINS = "https://pehchaanai.vercel.app"
+}
+
+# -X faulthandler: a native crash inside PortAudio/WASAPI otherwise kills the
+# process with no output at all; this prints a Python traceback for it.
+& ".\.venv\Scripts\python.exe" -X faulthandler app.py

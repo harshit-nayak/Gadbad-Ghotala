@@ -2,14 +2,12 @@ import type {
   AttackType,
   AuditCategory,
   CallOutcome,
-  DocumentSource,
   IncidentStatus,
   RequestKind,
   RiskLevel,
   SignalId,
   VoiceProfileStatus,
 } from '../../domain/types';
-import type { IconName } from '../ui/Icon';
 import type { Tone } from '../ui/Pill';
 
 export const riskLevelLabel: Record<RiskLevel, string> = { low: 'Low', medium: 'Medium', high: 'High' };
@@ -83,14 +81,6 @@ export const profileStatusLabel: Record<VoiceProfileStatus, { text: string; tone
   trusted: { text: 'Trusted', tone: 'safe' },
   enrolling: { text: 'Enrolling', tone: 'analysis' },
   needs_review: { text: 'Needs review', tone: 'warn' },
-};
-
-export const documentSourceLabel: Record<DocumentSource, { text: string; icon: IconName }> = {
-  upload: { text: 'Upload', icon: 'upload' },
-  website: { text: 'Website', icon: 'globe' },
-  extension: { text: 'Browser extension', icon: 'puzzle' },
-  api: { text: 'API', icon: 'code' },
-  pasted: { text: 'Pasted content', icon: 'fileText' },
 };
 
 export const auditCategoryLabel: Record<AuditCategory, string> = {

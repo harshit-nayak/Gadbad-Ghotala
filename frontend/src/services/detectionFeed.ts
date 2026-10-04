@@ -11,7 +11,7 @@
  * near track too if DETECT_TRACKS includes it, but that is the employee's own voice.
  */
 import { useSyncExternalStore } from 'react';
-import { BACKEND_HTTP } from '../app/backend';
+import { BACKEND_HTTP, BACKEND_TOKEN } from '../app/backend';
 import type { RiskLevel } from '../domain/types';
 
 export type FeedConnection = 'connecting' | 'open' | 'offline';
@@ -58,8 +58,13 @@ export interface DetectionFeedState {
 }
 
 /** null when no backend is configured/guessable (see BACKEND_HTTP) — the feed then stays 'offline' and never opens a socket. */
-const FEED_URL: string | null =
+const BASE_FEED_URL: string | null =
   import.meta.env.VITE_DETECTION_WS || (BACKEND_HTTP ? `${BACKEND_HTTP.replace(/^http/, 'ws')}/ws/monitor` : null);
+// Browsers can't set headers on a WebSocket handshake, so the shared token (if any) goes as ?token=.
+const FEED_URL: string | null =
+  BASE_FEED_URL && BACKEND_TOKEN
+    ? `${BASE_FEED_URL}${BASE_FEED_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(BACKEND_TOKEN)}`
+    : BASE_FEED_URL;
 const RETRY_MS = [1000, 2000, 5000];
 
 let state: DetectionFeedState = { connection: 'connecting', detector: null, session: null, handledSessionId: null };

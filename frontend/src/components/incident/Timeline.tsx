@@ -1,9 +1,10 @@
+import { PRODUCT_NAME } from '../../app/brand';
 import { formatDateIst, formatTimeIst, formatTimeSecIst } from '../../domain/format';
 import type { TimelineEvent } from '../../domain/types';
 import './incident.css';
 
 const actorLabel: Record<TimelineEvent['actor'], string> = {
-  system: 'GG',
+  system: PRODUCT_NAME,
   employee: 'Employee',
   claimed_person: 'Claimed person',
   security: 'Security',

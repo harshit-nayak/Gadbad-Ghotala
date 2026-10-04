@@ -46,14 +46,14 @@ export function AppShell() {
         Skip to content
       </a>
       <header className="shell__bar">
-        <Link to="/employee" className="shell__brand" aria-label={`${PRODUCT_NAME} home`}>
+        <Link to="/" className="shell__brand" aria-label={`${PRODUCT_NAME} home`}>
           <Logo />
         </Link>
-        <nav className="shell__nav" aria-label="Product areas">
+        <nav className="shell__nav" aria-label="Main Navigation">
           {productAreas.filter((item) => !item.hidden).map((item) => (
             <NavLink
               key={item.id}
-              to={item.basePath}
+              to={item.id === 'about' ? '/' : item.basePath}
               className="shell__tab"
               aria-current={item.id === area.id ? 'page' : undefined}
             >

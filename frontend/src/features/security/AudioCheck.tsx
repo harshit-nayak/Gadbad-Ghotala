@@ -20,6 +20,7 @@ import {
 import './audioCheck.css';
 
 type Phase = 'idle' | 'decoding' | 'analysing' | 'done' | 'error';
+type InputMode = 'choose' | 'upload' | 'mic';
 
 const labelCopy: Record<string, { text: string; level: RiskLevel }> = {
   likely_real: { text: 'Sounds real', level: 'low' },
@@ -114,7 +115,151 @@ function Timeline({
   );
 }
 
+/** Microphone recording panel — requests browser mic permission, captures to a Blob. */
+function MicRecorder({ onRecorded }: { onRecorded: (file: File) => void }) {
+  const [permState, setPermState] = useState<'prompt' | 'granted' | 'denied' | 'requesting'>('prompt');
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<BlobPart[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    // Pre-check permission state (non-blocking)
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName }).then((result) => {
+        setPermState(result.state as 'prompt' | 'granted' | 'denied');
+        result.onchange = () => setPermState(result.state as 'prompt' | 'granted' | 'denied');
+      }).catch(() => {/* permissions API not available, ignore */});
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const requestAndStart = async () => {
+    setPermState('requesting');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      setPermState('granted');
+      startRecording(stream);
+    } catch {
+      setPermState('denied');
+    }
+  };
+
+  const startRecording = (stream: MediaStream) => {
+    chunks.current = [];
+    const mr = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg' });
+    mediaRecorder.current = mr;
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
+    mr.onstop = () => {
+      const blob = new Blob(chunks.current, { type: mr.mimeType });
+      const ext = mr.mimeType.includes('ogg') ? 'ogg' : 'webm';
+      const file = new File([blob], `mic-recording-${Date.now()}.${ext}`, { type: mr.mimeType });
+      onRecorded(file);
+      stream.getTracks().forEach((t) => t.stop());
+    };
+    mr.start(250);
+    setRecording(true);
+    setElapsed(0);
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+  };
+
+  const stopRecording = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    mediaRecorder.current?.stop();
+    setRecording(false);
+  };
+
+  return (
+    <div className="mic-recorder">
+      {permState === 'denied' && (
+        <div className="mic-recorder__denied" role="alert">
+          <Icon name="alert" size={18} />
+          <div>
+            <strong>Microphone access denied.</strong>
+            <p>Please allow microphone access in your browser's site permissions, then reload the page.</p>
+          </div>
+        </div>
+      )}
+
+      {(permState === 'prompt' || permState === 'requesting') && !recording && (
+        <div className="mic-recorder__prompt">
+          <div className="mic-recorder__icon-wrap">
+            <Icon name="voice" size={26} />
+          </div>
+          <p className="mic-recorder__title">Record from microphone</p>
+          <p className="mic-recorder__sub">
+            Click the button below. Your browser will ask for microphone permission — audio is processed locally and never stored.
+          </p>
+          <button
+            id="mic-request-btn"
+            type="button"
+            className="btn btn--primary"
+            onClick={() => void requestAndStart()}
+            disabled={permState === 'requesting'}
+          >
+            {permState === 'requesting' ? (
+              <><span className="spinner spinner--sm" aria-hidden="true" /> Requesting permission…</>
+            ) : (
+              <>
+                <Icon name="voice" size={16} />
+                Allow &amp; start recording
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {permState === 'granted' && !recording && (
+        <div className="mic-recorder__prompt">
+          <div className="mic-recorder__icon-wrap mic-recorder__icon-wrap--ready">
+            <Icon name="voice" size={26} />
+          </div>
+          <p className="mic-recorder__title">Ready to record</p>
+          <p className="mic-recorder__sub">Microphone access granted. Press the button to start.</p>
+          <button
+            id="mic-start-btn"
+            type="button"
+            className="btn btn--primary"
+            onClick={() => { if (streamRef.current) startRecording(streamRef.current); else void requestAndStart(); }}
+          >
+            <Icon name="voice" size={16} />
+            Start recording
+          </button>
+        </div>
+      )}
+
+      {recording && (
+        <div className="mic-recorder__live">
+          <div className="mic-recorder__ring" aria-hidden="true">
+            <span className="mic-recorder__ring-pulse" />
+            <Icon name="voice" size={22} />
+          </div>
+          <div className="mic-recorder__timer tabular" aria-live="polite" aria-label={`Recording for ${elapsed} seconds`}>
+            {formatClock(elapsed)}
+          </div>
+          <p className="mic-recorder__live-label">Recording… speak clearly</p>
+          <button
+            id="mic-stop-btn"
+            type="button"
+            className="btn btn--primary"
+            onClick={stopRecording}
+          >
+            Stop &amp; analyse
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AudioCheck() {
+  const [mode, setMode] = useState<InputMode>('choose');
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -196,6 +341,7 @@ export function AudioCheck() {
     setAudioUrl(null);
     setPhase('idle');
     setError(null);
+    setMode('choose');
   };
 
   const seek = (ms: number) => {
@@ -210,7 +356,10 @@ export function AudioCheck() {
     e.preventDefault();
     setDragging(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped) void check(dropped);
+    if (dropped) {
+      setMode('upload');
+      void check(dropped);
+    }
   };
 
   const last = windows.at(-1);
@@ -224,39 +373,104 @@ export function AudioCheck() {
   return (
     <div className="page">
       <PageHeader
-        title="Audio check"
-        description="Upload a recording to check whether the voice in it is AI-generated. It is scored by the same model and rules as live calls."
+        title="Voice & Audio check"
+        eyebrow="AI Voice Forensics"
+        description="Detect AI-generated and cloned voices — record live from your microphone or upload an audio file."
       />
 
       {!file ? (
         <Panel>
-          <div
-            className={`audio-drop ${dragging ? 'is-dragging' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-          >
-            <span className="audio-drop__icon"><Icon name="voice" size={24} /></span>
-            <p className="audio-drop__title">Drop a recording here</p>
-            <p className="audio-drop__sub">WAV, MP3, M4A, OGG or WebM, up to 30 minutes. Only the speech is scored.</p>
-            <Button variant="primary" icon="upload" onClick={() => fileInput.current?.click()}>
-              Choose file
-            </Button>
-            <input
-              ref={fileInput}
-              type="file"
-              className="visually-hidden"
-              accept="audio/*,.wav,.mp3,.m4a,.ogg,.opus,.webm,.flac,.aac"
-              onChange={(e) => {
-                const chosen = e.target.files?.[0];
-                if (chosen) void check(chosen);
-                e.target.value = '';
-              }}
-            />
-          </div>
+          {/* Mode chooser */}
+          {mode === 'choose' && (
+            <div className="audio-mode-chooser">
+              <button
+                id="audio-mode-mic"
+                type="button"
+                className="audio-mode-btn"
+                onClick={() => setMode('mic')}
+              >
+                <span className="audio-mode-btn__icon">
+                  <Icon name="voice" size={24} />
+                </span>
+                <span className="audio-mode-btn__label">Record with mic</span>
+                <span className="audio-mode-btn__sub">Use browser microphone</span>
+              </button>
+
+              <div className="audio-mode-divider"><span>or</span></div>
+
+              <button
+                id="audio-mode-upload"
+                type="button"
+                className="audio-mode-btn"
+                onClick={() => setMode('upload')}
+              >
+                <span className="audio-mode-btn__icon">
+                  <Icon name="upload" size={24} />
+                </span>
+                <span className="audio-mode-btn__label">Upload a file</span>
+                <span className="audio-mode-btn__sub">WAV, MP3, M4A, OGG, WebM</span>
+              </button>
+            </div>
+          )}
+
+          {/* Upload mode */}
+          {mode === 'upload' && (
+            <>
+              <button
+                type="button"
+                className="audio-back-btn"
+                onClick={() => setMode('choose')}
+              >
+                ← Back
+              </button>
+              <div
+                className={`audio-drop ${dragging ? 'is-dragging' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+              >
+                <span className="audio-drop__icon"><Icon name="upload" size={24} /></span>
+                <p className="audio-drop__title">Drop a recording here</p>
+                <p className="audio-drop__sub">WAV, MP3, M4A, OGG or WebM, up to 30 minutes. Only speech is scored.</p>
+                <Button variant="primary" icon="upload" onClick={() => fileInput.current?.click()}>
+                  Choose file
+                </Button>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  id="audio-file-input"
+                  className="visually-hidden"
+                  accept="audio/*,.wav,.mp3,.m4a,.ogg,.opus,.webm,.flac,.aac"
+                  onChange={(e) => {
+                    const chosen = e.target.files?.[0];
+                    if (chosen) void check(chosen);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Mic mode */}
+          {mode === 'mic' && (
+            <>
+              <button
+                type="button"
+                className="audio-back-btn"
+                onClick={() => setMode('choose')}
+              >
+                ← Back
+              </button>
+              <MicRecorder
+                onRecorded={(f) => {
+                  void check(f);
+                }}
+              />
+            </>
+          )}
         </Panel>
       ) : (
         <>
@@ -266,7 +480,7 @@ export function AudioCheck() {
               subtitle={`${formatBytes(file.size)}${durationMs ? `, ${formatClock(durationMs / 1000)}` : ''}`}
               actions={
                 <Button variant="ghost" icon="refresh" onClick={reset}>
-                  Check another file
+                  Check another
                 </Button>
               }
             >

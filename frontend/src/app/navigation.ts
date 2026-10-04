@@ -1,11 +1,11 @@
-/** Product areas and the employee call flow. Navigation UI reads from here. */
+/** Product areas and navigation configuration. */
 import type { IconName } from '../components/ui/Icon';
 import type { CallStage } from '../state/demoState';
 
 export type ThemeName = 'employee' | 'security' | 'documents' | 'admin';
 
 export interface ProductArea {
-  id: 'employee' | 'security' | 'documents' | 'admin' | 'client' | 'report';
+  id: string;
   label: string;
   basePath: string;
   theme: ThemeName;
@@ -14,16 +14,22 @@ export interface ProductArea {
 }
 
 export const productAreas: ProductArea[] = [
-  { id: 'employee', label: 'Employee', basePath: '/employee', theme: 'employee' },
-  { id: 'security', label: 'Security', basePath: '/security', theme: 'security' },
-  { id: 'documents', label: 'Documents', basePath: '/documents', theme: 'documents' },
-  { id: 'admin', label: 'Administrator', basePath: '/admin', theme: 'admin' },
-  { id: 'client', label: 'Capture client', basePath: '/client', theme: 'security' },
+  { id: 'about', label: 'About', basePath: '/about', theme: 'employee' },
+  { id: 'audio', label: 'Audio', basePath: '/audio', theme: 'employee' },
+  { id: 'video', label: 'Video', basePath: '/video', theme: 'employee' },
+  { id: 'documents', label: 'Document', basePath: '/documents', theme: 'documents' },
+  { id: 'dashboard', label: 'Dashboard', basePath: '/dashboard', theme: 'employee' },
+
+  // Hidden legacy / demo routes (accessible via deep-links or demo flow, not in top header)
+  { id: 'employee', label: 'Employee', basePath: '/employee', theme: 'employee', hidden: true },
+  { id: 'security', label: 'Security Ops', basePath: '/security', theme: 'security', hidden: true },
+  { id: 'admin', label: 'Administrator', basePath: '/admin', theme: 'admin', hidden: true },
+  { id: 'client', label: 'Capture client', basePath: '/client', theme: 'security', hidden: true },
   { id: 'report', label: 'Incident report', basePath: '/report', theme: 'documents', hidden: true },
 ];
 
 export const areaForPath = (pathname: string): ProductArea =>
-  productAreas.find((area) => pathname.startsWith(area.basePath)) ?? productAreas[0];
+  productAreas.find((area) => pathname === area.basePath || pathname.startsWith(`${area.basePath}/`)) ?? productAreas[0];
 
 /** The call state machine decides the route, so URL and state never disagree. */
 export const pathForStage: Record<CallStage, string> = {
@@ -53,19 +59,20 @@ export interface WorkspaceLink {
 
 export const workspaceNav: Record<'security' | 'documents' | 'admin', { title: string; links: WorkspaceLink[] }> = {
   security: {
-    title: 'Security operations',
+    title: 'Dashboard',
     links: [
-      { label: 'Dashboard', to: '/security', icon: 'dashboard', end: true },
+      { label: 'Overview', to: '/dashboard', icon: 'dashboard', end: true },
       { label: 'Incidents', to: '/security/incidents', icon: 'list' },
-      { label: 'Audio check', to: '/security/audio', icon: 'voice' },
       { label: 'Voice profiles', to: '/security/profiles', icon: 'fingerprint' },
     ],
   },
   documents: {
-    title: 'Document security',
+    title: 'Document verification & signing',
     links: [
-      { label: 'Analyse', to: '/documents', icon: 'shield', end: true },
-      { label: 'All analyses', to: '/documents/history', icon: 'fileText' },
+      { label: 'Verify', to: '/documents', icon: 'shieldCheck', end: true },
+      { label: 'Sign', to: '/documents/sign', icon: 'fileText' },
+      { label: 'Admin', to: '/documents/admin', icon: 'userCheck' },
+      { label: 'History', to: '/documents/history', icon: 'list' },
     ],
   },
   admin: {

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ORG_NAME } from '../../app/brand';
 import { BarList, StackedBars } from '../../components/charts/Charts';
+import { CatchJourney } from '../../components/incident/CatchJourney';
 import { IncidentTable } from '../../components/incident/IncidentTable';
 import { attackTypeLabel, outcomeLabel, signalColor, signalShortLabel } from '../../components/incident/labels';
 import { PageHeader, Panel } from '../../components/layout/Workspace';
@@ -59,6 +60,12 @@ export function SecurityDashboard() {
             <Icon name="arrowRight" size={16} />
           </Link>
         </section>
+      )}
+
+      {live && (
+        <Panel title="How this call was caught">
+          <CatchJourney incident={live} />
+        </Panel>
       )}
 
       <KpiStrip

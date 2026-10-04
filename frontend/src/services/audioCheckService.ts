@@ -6,7 +6,7 @@
  * pipeline takes, so the backend needs no codecs. Results stream back as
  * NDJSON, one event per scored window.
  */
-import { BACKEND_HTTP } from '../app/backend';
+import { BACKEND_HTTP, BACKEND_TOKEN } from '../app/backend';
 
 export const SAMPLE_RATE = 16_000;
 export const MAX_SECONDS = 30 * 60;
@@ -102,7 +102,10 @@ export async function analyseAudio(
   try {
     response = await fetch(`${BACKEND_HTTP}/analyse?name=${encodeURIComponent(name)}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        ...(BACKEND_TOKEN ? { Authorization: `Bearer ${BACKEND_TOKEN}` } : {}),
+      },
       body: pcm,
       signal,
     });

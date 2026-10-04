@@ -248,6 +248,75 @@ button.transcript__time:hover { text-decoration: underline; }
 }
 .embedding--risk span { background: var(--risk); }
 
+/* ---------- Catch journey ---------- */
+.catch-journey {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.catch-journey::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: calc(12.5% + 6px);
+  right: calc(12.5% + 6px);
+  height: 2px;
+  background: var(--line-strong);
+  transform-origin: left center;
+  animation: catch-journey-line var(--dur-3) var(--ease-out) both;
+  animation-delay: 80ms;
+}
+.catch-journey__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: var(--space-2);
+  align-items: start;
+  opacity: 0;
+  animation: catch-journey-step var(--dur-2) var(--ease-out) both;
+  animation-delay: calc(220ms + var(--i) * 140ms);
+}
+.catch-journey__node {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-subtle);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.catch-journey__step.is-done .catch-journey__node {
+  border-color: var(--safe);
+  background: var(--safe-soft);
+  color: var(--safe);
+}
+.catch-journey__text { display: grid; gap: 1px; }
+.catch-journey__label { color: var(--ink); font-size: var(--text-sm); font-weight: 650; }
+.catch-journey__detail { color: var(--ink-muted); font-size: var(--text-xs); }
+.catch-journey__time { color: var(--ink-subtle); font-size: var(--text-xs); }
+
+@keyframes catch-journey-step {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes catch-journey-line {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catch-journey__step, .catch-journey::before { animation: none; opacity: 1; transform: none; }
+}
+
+@media (max-width: 800px) {
+  .catch-journey { grid-template-columns: 1fr; gap: var(--space-4); }
+  .catch-journey::before { display: none; }
+}
+
 @media (max-width: 800px) {
   .region-chip { grid-template-columns: 10px 80px 1fr; }
   .region-chip__label { grid-column: 2 / -1; }

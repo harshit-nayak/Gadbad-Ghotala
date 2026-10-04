@@ -1,0 +1,55 @@
+# --- Secrets / local state — never commit -----------------------------------
+# Root CA private key + CA working area
+/.ca/
+# Per-user signing state and the local enrolment index
+/.docsign/
+*.key.pem
+root_ca_key.pem
+# The root cert is generated per deployment by `docsign init-ca`
+/trust/*
+!/trust/.gitkeep
+
+# Signed artefacts produced while testing
+*.sig
+
+# Signature registry — per-deployment runtime data (signatures + employee
+# certificates), never a fixture to commit. See README's Signature registry
+# section: back this up separately, it is not part of the source tree.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test / tooling caches
+.pytest_cache/
+.pytest_temp/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# --- Editors / OS ----------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

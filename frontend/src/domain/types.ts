@@ -199,53 +199,6 @@ export interface VoiceProfile {
   matchThreshold: number;
 }
 
-export type DocumentSource = 'upload' | 'website' | 'extension' | 'api' | 'pasted';
-
-export interface ExtractedEntity {
-  kind: 'amount' | 'organisation' | 'person' | 'bank_account' | 'ifsc' | 'email' | 'url' | 'deadline' | 'phone';
-  value: string;
-  note?: string;
-  flagged: boolean;
-}
-
-export interface SuspiciousInstruction {
-  quote: string;
-  reason: string;
-  level: RiskLevel;
-}
-
-export interface ConsistencyCheck {
-  label: string;
-  result: 'pass' | 'fail' | 'warn';
-  detail: string;
-}
-
-export interface DocumentAnalysis {
-  id: string;
-  name: string;
-  source: DocumentSource;
-  sourceDetail: string;
-  submittedBy: string;
-  analysedAt: string;
-  /** 'analysing' only for analyses started in this session */
-  state: 'analysing' | 'complete';
-  meta: string;
-  excerpt: string[];
-  entities: ExtractedEntity[];
-  instructions: SuspiciousInstruction[];
-  consistency: ConsistencyCheck[];
-  contextSummary: string;
-  requestedAction: string;
-  reasons: string[];
-  recommendation: string;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  /** Counterparty that may link to a call incident */
-  counterparty?: string;
-  reviewed?: boolean;
-  sharedWithSecurity?: boolean;
-}
-
 export type AuditCategory = 'verification' | 'employee_action' | 'security_response' | 'profile' | 'report' | 'system';
 
 export interface AuditEvent {

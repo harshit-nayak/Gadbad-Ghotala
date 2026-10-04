@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PRODUCT_NAME } from '../../app/brand';
 import { auditCategoryLabel, incidentStatusLabel, incidentStatusTone, outcomeShort } from '../../components/incident/labels';
 import { PageHeader, Panel } from '../../components/layout/Workspace';
 import { Button } from '../../components/ui/Button';
@@ -127,7 +128,7 @@ export function ReportsAudit() {
     <div className="page">
       <PageHeader
         title="Reports & audit"
-        description="Incident reports, verification records and a complete audit trail of actions across GG."
+        description={`Incident reports, verification records and a complete audit trail of actions across ${PRODUCT_NAME}.`}
         actions={<Button variant="primary" icon="fileText" onClick={generateSummary}>Generate 30-day summary</Button>}
       />
 

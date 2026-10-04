@@ -1,6 +1,5 @@
 import { incidentHistory } from '../data/incidentHistory';
-import { seededDocuments } from '../data/documents';
-import type { AuditEvent, CallOutcome, DocumentAnalysis, Incident, IncidentStatus, TimelineEvent } from '../domain/types';
+import type { AuditEvent, CallOutcome, Incident, IncidentStatus, TimelineEvent } from '../domain/types';
 
 export type CallStage = 'incoming' | 'declined' | 'live' | 'alert' | 'verify' | 'outcome';
 
@@ -11,7 +10,6 @@ export interface DemoState {
   outcome: CallOutcome | null;
   /** Newest first. Seeded history plus anything created this session. */
   incidents: Incident[];
-  documents: DocumentAnalysis[];
   /** Audit entries for actions taken this session that are not incident timeline events */
   sessionAudit: AuditEvent[];
 }
@@ -24,8 +22,6 @@ export type DemoAction =
   | { type: 'startVerify' }
   | { type: 'resolve'; outcome: CallOutcome; incident: Incident }
   | { type: 'updateIncident'; id: string; status?: IncidentStatus; assignee?: string; event: TimelineEvent }
-  | { type: 'addDocument'; document: DocumentAnalysis }
-  | { type: 'updateDocument'; id: string; patch: Partial<DocumentAnalysis> }
   | { type: 'audit'; event: AuditEvent }
   | { type: 'reset' };
 
@@ -34,7 +30,6 @@ export const createInitialState = (): DemoState => ({
   acceptedAt: null,
   outcome: null,
   incidents: [...incidentHistory].reverse(),
-  documents: seededDocuments,
   sessionAudit: [],
 });
 
@@ -70,13 +65,6 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
               }
             : i,
         ),
-      };
-    case 'addDocument':
-      return { ...state, documents: [action.document, ...state.documents] };
-    case 'updateDocument':
-      return {
-        ...state,
-        documents: state.documents.map((d) => (d.id === action.id ? { ...d, ...action.patch } : d)),
       };
     case 'audit':
       return { ...state, sessionAudit: [action.event, ...state.sessionAudit] };

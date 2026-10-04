@@ -18,6 +18,13 @@ export const BACKEND_HTTP: string | null = import.meta.env.VITE_BACKEND_URL
     : null;
 
 /**
+ * Shared token for backends started with AUTH_TOKEN set (app/config.py). Sent
+ * as `Authorization: Bearer` on REST calls and `?token=` on the monitor
+ * WebSocket, since browsers can't set headers on a socket handshake.
+ */
+export const BACKEND_TOKEN: string | null = import.meta.env.VITE_BACKEND_TOKEN || null;
+
+/**
  * The desktop capture client's local control API (client/control_server.py).
  * It runs on the same computer as the browser, not the web server, so this is
  * always localhost unless VITE_CLIENT_URL says otherwise.

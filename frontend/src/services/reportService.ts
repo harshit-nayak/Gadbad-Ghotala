@@ -7,6 +7,7 @@
  * sessionStorage so a refresh doesn't lose a half-written report; nothing
  * leaves the browser.
  */
+import { PRODUCT_NAME } from '../app/brand';
 import type { AudioCheckSummary, AudioWindowResult } from './audioCheckService';
 import { readSession, type DetectionSession } from './detectionFeed';
 
@@ -222,7 +223,7 @@ function toLocalInput(iso: string): string {
 }
 
 /** Organisation filled in on new reports until organisations come from the account. */
-export const DEFAULT_ORGANISATION = 'GG';
+export const DEFAULT_ORGANISATION = PRODUCT_NAME;
 
 export interface ReporterPrefill {
   name?: string | null;
@@ -257,7 +258,7 @@ export function validateDetails(details: CallDetails): Partial<Record<keyof Call
 export function newReportId(now = new Date()): string {
   const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `GG-${day}-${suffix}`;
+  return `PAI-${day}-${suffix}`;
 }
 
 export const formatLocalDateTime = (value: string) =>

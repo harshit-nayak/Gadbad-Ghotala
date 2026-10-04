@@ -40,11 +40,14 @@ const deviceStatus: Record<CallStage, { text: string; tone: Tone; live?: boolean
   outcome: { text: 'Protected', tone: 'safe' },
 };
 
+import { useCurrentUser } from '../../hooks/useCurrentUser';
+
 export function EmployeeLayout() {
   const { state, actions } = useDemo();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const expectedPath = pathForStage[state.stage];
+  const currentUser = useCurrentUser();
 
   useEffect(() => {
     if (pathname !== expectedPath) navigate(expectedPath, { replace: true });
@@ -67,15 +70,30 @@ export function EmployeeLayout() {
   const currentStep = employeeSteps.findIndex((step) => step.stages.includes(state.stage));
   const status = deviceStatus[state.stage];
 
+  const employeeName = currentUser.isAuthenticated ? currentUser.name : receiver.name;
+  const employeeRole = currentUser.isAuthenticated ? currentUser.role : receiver.role;
+  const employeeLocation = currentUser.isAuthenticated ? currentUser.location : receiver.location;
+  const employeeInitials = currentUser.isAuthenticated ? currentUser.initials : receiver.initials;
+  const employeeAvatar = currentUser.isAuthenticated ? currentUser.avatarUrl : undefined;
+
   return (
     <div className="employee">
       <aside className="employee__rail" aria-label="Call context">
         <div className="persona">
-          <Avatar initials={receiver.initials} tone="plum" />
+          {employeeAvatar ? (
+            <img
+              src={employeeAvatar}
+              alt=""
+              referrerPolicy="no-referrer"
+              style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }}
+            />
+          ) : (
+            <Avatar initials={employeeInitials} tone="plum" />
+          )}
           <div>
-            <h1 className="persona__name">{receiver.name}</h1>
+            <h1 className="persona__name">{employeeName}</h1>
             <p className="persona__role">
-              {receiver.role}, {receiver.location}
+              {employeeRole}, {employeeLocation}
             </p>
           </div>
         </div>

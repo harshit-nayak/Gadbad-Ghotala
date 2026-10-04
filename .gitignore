@@ -19,6 +19,12 @@ npm-debug.log*
 .env.local
 .env.*.local
 !.env.example
+*.sig
+*.key.pem
+root_ca_key.pem
+*.db*
+docPipeline/.ca/
+docPipeline/.docsign/
 
 # ---- Model weights (multi-GB; re-fetched by the scripts in each README) ----
 *.onnx
