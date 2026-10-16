@@ -9,6 +9,7 @@ import { Pill } from '../../components/ui/Pill';
 import { RiskRing } from '../../components/viz/RiskRing';
 import { formatClock } from '../../domain/format';
 import type { RiskLevel } from '../../domain/types';
+import { ensureBackendAwake } from '../../services/backendWake';
 import { startLiveMic, type LiveMicSession, type LiveSummary, type LiveVerdict } from '../../services/liveMicService';
 
 type Phase = 'idle' | 'starting' | 'live' | 'stopping' | 'done' | 'error';
@@ -38,6 +39,7 @@ export function LiveMicCheck({ onBack }: { onBack: () => void }) {
   const [sentSeconds, setSentSeconds] = useState(0);
   const [level, setLevel] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [wakeNote, setWakeNote] = useState<string | null>(null);
   const sessionRef = useRef<LiveMicSession | null>(null);
   const navigate = useNavigate();
 
@@ -51,6 +53,8 @@ export function LiveMicCheck({ onBack }: { onBack: () => void }) {
     setSummary(null);
     setSentSeconds(0);
     try {
+      await ensureBackendAwake(setWakeNote);
+      setWakeNote(null);
       sessionRef.current = await startLiveMic((event) => {
         switch (event.type) {
           case 'level':
@@ -73,6 +77,7 @@ export function LiveMicCheck({ onBack }: { onBack: () => void }) {
       setStartedAt(Date.now());
       setPhase('live');
     } catch (err) {
+      setWakeNote(null);
       setError(err instanceof Error ? err.message : String(err));
       setPhase('error');
     }
@@ -142,6 +147,7 @@ export function LiveMicCheck({ onBack }: { onBack: () => void }) {
                 ? <><span className="spinner spinner--sm" aria-hidden="true" /> Connecting…</>
                 : <><Icon name="activity" size={16} /> Start live check</>}
             </button>
+            {wakeNote && <p className="mic-recorder__sub" role="status">{wakeNote}</p>}
           </div>
         </div>
       </Panel>
@@ -183,6 +189,7 @@ export function LiveMicCheck({ onBack }: { onBack: () => void }) {
               </p>
             </div>
           </div>
+          {wakeNote && <p className="muted" role="status">{wakeNote}</p>}
           {error && (
             <p className="audio-error" role="alert">
               <Icon name="alert" size={16} />

@@ -50,3 +50,6 @@ Thumbs.db
 desktop.ini
 .idea/
 *.swp
+
+# AWS deploy state (ids + backend auth token)
+call-monitor/deploy/aws/.state.env

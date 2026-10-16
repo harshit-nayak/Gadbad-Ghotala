@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config, detector, model, vad
+from app.activity import ActivityMiddleware, router as activity_router
 from app.file_analysis import router as file_analysis_router
 from app.models import HealthResponse
 from app.monitor import router as monitor_router
@@ -48,6 +49,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Counts live streams and uploads in flight, for the idle auto-stop on a
+# sleeping server (see app/activity.py and ../deploy/aws).
+app.add_middleware(ActivityMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -87,6 +91,7 @@ async def effective_config():
 app.include_router(websocket_router)
 app.include_router(monitor_router)
 app.include_router(file_analysis_router)
+app.include_router(activity_router)
 
 if __name__ == "__main__":
     import uvicorn

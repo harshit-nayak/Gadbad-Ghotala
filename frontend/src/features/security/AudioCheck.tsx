@@ -17,6 +17,7 @@ import {
   type AudioSegment,
   type AudioWindowResult,
 } from '../../services/audioCheckService';
+import { ensureBackendAwake } from '../../services/backendWake';
 import { LiveMicCheck } from './LiveMicCheck';
 import './audioCheck.css';
 
@@ -276,6 +277,7 @@ export function AudioCheck() {
   const [summary, setSummary] = useState<AudioCheckSummary | null>(null);
   const [positionMs, setPositionMs] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [wakeNote, setWakeNote] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -306,6 +308,8 @@ export function AudioCheck() {
       if (controller.signal.aborted) return;
       setDurationMs(durationSec * 1000);
       setPhase('analysing');
+      await ensureBackendAwake(setWakeNote, controller.signal);
+      setWakeNote(null);
       await analyseAudio(
         pcm,
         next.name,
@@ -334,6 +338,7 @@ export function AudioCheck() {
         controller.signal,
       );
     } catch (err) {
+      setWakeNote(null);
       if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : String(err));
       setPhase('error');
@@ -524,7 +529,9 @@ export function AudioCheck() {
                   <span>
                     {phase === 'decoding'
                       ? 'Decoding the recording in your browser…'
-                      : `Analysing ${formatClock(processedMs / 1000)} of ${formatClock(durationMs / 1000)}, ${windows.length} ${windows.length === 1 ? 'window' : 'windows'} scored`}
+                      : wakeNote
+                        ? wakeNote
+                        : `Analysing ${formatClock(processedMs / 1000)} of ${formatClock(durationMs / 1000)}, ${windows.length} ${windows.length === 1 ? 'window' : 'windows'} scored`}
                   </span>
                   <span className="audio-progress__bar" aria-hidden="true">
                     <span style={{ transform: `scaleX(${phase === 'decoding' ? 0 : progress})` }} />
