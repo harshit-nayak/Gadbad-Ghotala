@@ -4,8 +4,10 @@
 # deploy.sh fills in the __PLACEHOLDERS__ before launching the instance.
 #
 # Leaves behind:
-#   gg-backend.service   uvicorn on :8000 (one worker -- the monitor feed and
-#                        sessions live in process memory)
+#   gg-backend.service   uvicorn on 127.0.0.1:8000 (one worker -- the monitor
+#                        feed and sessions live in process memory)
+#   caddy                https:// + wss:// on PUBLIC_HOST, with an automatic
+#                        Let's Encrypt certificate, proxying to the backend
 #   gg-idle-stop.timer   powers the machine off (= EC2 "stopped", no compute
 #                        bill) once nothing has been analysed for IDLE_MINUTES
 set -euxo pipefail
@@ -15,6 +17,7 @@ CODE_URL='__CODE_URL__'
 HEAD_URL='__HEAD_URL__'
 AUTH_TOKEN='__AUTH_TOKEN__'
 IDLE_MINUTES='__IDLE_MINUTES__'
+PUBLIC_HOST='__PUBLIC_HOST__'
 B=/opt/gg/call-monitor/backend
 
 apt-get update
@@ -59,7 +62,7 @@ User=gg
 WorkingDirectory=$B
 Environment=PYTHONPATH=.
 EnvironmentFile=/etc/gg-backend.env
-ExecStart=$B/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+ExecStart=$B/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
 
@@ -105,6 +108,20 @@ OnUnitActiveSec=1min
 [Install]
 WantedBy=timers.target
 EOF
+
+# Caddy terminates TLS (certificate kept on disk, so it survives stop/start)
+# and proxies HTTP, WebSockets and the streamed /analyse response unbuffered.
+apt-get install -y debian-keyring debian-archive-keyring apt-transport-https gpg
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key   | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt   > /etc/apt/sources.list.d/caddy-stable.list
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y caddy
+cat > /etc/caddy/Caddyfile <<EOF
+$PUBLIC_HOST {
+	reverse_proxy 127.0.0.1:8000
+}
+EOF
+systemctl reload-or-restart caddy
 
 systemctl daemon-reload
 systemctl enable --now gg-backend.service gg-idle-stop.timer

@@ -13,7 +13,7 @@ export const WAKE_URL: string | null = import.meta.env.VITE_WAKE_URL
   ? import.meta.env.VITE_WAKE_URL.replace(/\/$/, '')
   : null;
 
-/** Boot (~45 s) + model load (~30 s) is ~1.5 min; allow for a slow day. */
+/** Measured on EC2: ~37 s from start to answering over HTTPS. Allow for a slow day. */
 const WAKE_TIMEOUT_MS = 5 * 60_000;
 const POLL_MS = 5_000;
 
@@ -52,7 +52,7 @@ export async function ensureBackendAwake(onStatus: (message: string) => void, si
     // that was still shutting down (which can't be started until it stops).
     await requestWake();
     const seconds = Math.round((Date.now() - startedAt) / 1000);
-    onStatus(`The detector sleeps when unused to save cost. Waking it up, usually about 2 minutes (${seconds} s so far)…`);
+    onStatus(`The detector sleeps when unused to save cost. Waking it up, usually under a minute (${seconds} s so far)…`);
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
     if (await isAwake()) return;
   }

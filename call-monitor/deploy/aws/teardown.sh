@@ -23,7 +23,7 @@ aws iam delete-role-policy --role-name $NAME-wake --policy-name start-backend 2>
 aws iam detach-role-policy --role-name $NAME-wake --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null
 aws iam delete-role --role-name $NAME-wake 2>/dev/null
 
-echo "== CloudFront"
+echo "== CloudFront (only if an earlier deploy created one)"
 DIST=$(awsq cloudfront list-distributions --query "DistributionList.Items[?Comment=='$NAME'].Id | [0]")
 if [ -n "$DIST" ] && [ "$DIST" != "None" ]; then
   ETAG=$(awsq cloudfront get-distribution-config --id "$DIST" --query ETag)

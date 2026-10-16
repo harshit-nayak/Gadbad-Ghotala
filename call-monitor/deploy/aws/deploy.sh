@@ -8,7 +8,7 @@
 #   EC2 instance     Ubuntu 24.04, $INSTANCE_TYPE, 20 GB gp3, set up by
 #                    bootstrap.sh; powers itself off after $IDLE_MINUTES idle
 #   Elastic IP       so the address survives stop/start
-#   CloudFront       https:// + wss:// in front of :8000, no domain needed
+#   Caddy (on EC2)   https:// + wss:// at <ip>.sslip.io, Let's Encrypt cert
 #   Lambda + URL     wake_lambda.py: the website calls it to start the machine
 #
 # Prints the Vercel environment variables at the end. teardown.sh deletes it all.
@@ -64,17 +64,18 @@ VPC=$(awsq ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[
 SG=$(awsq ec2 describe-security-groups --filters Name=group-name,Values=$NAME Name=vpc-id,Values="$VPC" --query 'SecurityGroups[0].GroupId')
 if [ "$SG" = "None" ]; then
   SG=$(awsq ec2 create-security-group --group-name $NAME --vpc-id "$VPC" \
-        --description "GG detection backend: :8000 from CloudFront only" --query GroupId)
-  # Only CloudFront can reach the backend; nothing else on the internet can.
-  CF_PL=$(awsq ec2 describe-managed-prefix-lists \
-            --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing \
-            --query 'PrefixLists[0].PrefixListId')
-  aws ec2 authorize-security-group-ingress --region "$REGION" --group-id "$SG" \
-    --ip-permissions "IpProtocol=tcp,FromPort=8000,ToPort=8000,PrefixListIds=[{PrefixListId=$CF_PL}]" >/dev/null
+        --description "GG detection backend: https via Caddy" --query GroupId)
   MY_IP=$(curl -fsS https://checkip.amazonaws.com | tr -d '\r\n')
   aws ec2 authorize-security-group-ingress --region "$REGION" --group-id "$SG" \
     --protocol tcp --port 22 --cidr "$MY_IP/32" >/dev/null
 fi
+# 443 serves the site's https/wss traffic; 80 only answers Let's Encrypt's
+# certificate challenge (Caddy redirects everything else to https). The
+# backend's own :8000 listens on localhost and is never exposed.
+for port in 80 443; do
+  aws ec2 authorize-security-group-ingress --region "$REGION" --group-id "$SG" \
+    --protocol tcp --port $port --cidr 0.0.0.0/0 >/dev/null 2>&1 || true   # already there
+done
 echo "$SG"
 
 step "SSH key (for debugging only)"
@@ -85,6 +86,21 @@ if [ "$(awsq ec2 describe-key-pairs --filters Name=key-name,Values=$NAME --query
   chmod 600 "$KEY_FILE"
 fi
 echo "$KEY_FILE"
+
+# The address comes first: the certificate is issued for a hostname derived
+# from it, and that hostname is baked into the instance's first-boot script.
+step "Elastic IP"
+ALLOC=$(awsq ec2 describe-addresses --filters Name=tag:Name,Values=$NAME --query 'Addresses[0].AllocationId')
+if [ "$ALLOC" = "None" ]; then
+  ALLOC=$(awsq ec2 allocate-address --domain vpc \
+    --tag-specifications "ResourceType=elastic-ip,Tags=[{Key=Name,Value=$NAME}]" --query AllocationId)
+  save EIP_ALLOC "$ALLOC"
+fi
+PUBLIC_IP=$(awsq ec2 describe-addresses --allocation-ids "$ALLOC" --query 'Addresses[0].PublicIp')
+# sslip.io answers <a-b-c-d>.sslip.io with a.b.c.d: a free, stable hostname
+# that Let's Encrypt can issue a certificate for. No domain to buy or manage.
+PUBLIC_HOST="${PUBLIC_IP//./-}.sslip.io"
+echo "$PUBLIC_IP -> $PUBLIC_HOST"
 
 # ---------------------------------------------------------------- instance
 step "EC2 instance"
@@ -100,6 +116,7 @@ if [ "$INSTANCE" = "None" ]; then
   ud=${ud//__HEAD_URL__/"$HEAD_URL"}
   ud=${ud//__AUTH_TOKEN__/"$AUTH_TOKEN"}
   ud=${ud//__IDLE_MINUTES__/"$IDLE_MINUTES"}
+  ud=${ud//__PUBLIC_HOST__/"$PUBLIC_HOST"}
   printf '%s\n' "$ud" > "$WORK/user-data.sh"
   INSTANCE=$(awsq ec2 run-instances --image-id "$AMI" --instance-type "$INSTANCE_TYPE" \
     --key-name $NAME --security-group-ids "$SG" \
@@ -111,59 +128,10 @@ if [ "$INSTANCE" = "None" ]; then
     --query 'Instances[0].InstanceId')
   save INSTANCE_ID "$INSTANCE"
 fi
-aws ec2 wait instance-exists --region "$REGION" --instance-ids "$INSTANCE"
-echo "$INSTANCE"
-
-step "Elastic IP"
-ALLOC=$(awsq ec2 describe-addresses --filters Name=tag:Name,Values=$NAME --query 'Addresses[0].AllocationId')
-if [ "$ALLOC" = "None" ]; then
-  ALLOC=$(awsq ec2 allocate-address --domain vpc \
-    --tag-specifications "ResourceType=elastic-ip,Tags=[{Key=Name,Value=$NAME}]" --query AllocationId)
-  save EIP_ALLOC "$ALLOC"
-fi
 aws ec2 wait instance-running --region "$REGION" --instance-ids "$INSTANCE" 2>/dev/null || true
 aws ec2 associate-address --region "$REGION" --instance-id "$INSTANCE" --allocation-id "$ALLOC" >/dev/null
-ORIGIN=$(awsq ec2 describe-instances --instance-ids "$INSTANCE" --query 'Reservations[0].Instances[0].PublicDnsName')
-echo "$ORIGIN"
-
-# ---------------------------------------------------------------- https
-step "CloudFront (https + wss)"
-DIST=$(awsq cloudfront list-distributions --query "DistributionList.Items[?Comment=='$NAME'].Id | [0]" 2>/dev/null || echo None)
-if [ "$DIST" = "None" ] || [ -z "$DIST" ]; then
-  cat > "$WORK/dist.json" <<EOF
-{
-  "CallerReference": "$NAME-$(date +%s)",
-  "Comment": "$NAME",
-  "Enabled": true,
-  "PriceClass": "PriceClass_200",
-  "Origins": {"Quantity": 1, "Items": [{
-    "Id": "ec2", "DomainName": "$ORIGIN",
-    "ConnectionAttempts": 1, "ConnectionTimeout": 5,
-    "CustomOriginConfig": {
-      "HTTPPort": 8000, "HTTPSPort": 443, "OriginProtocolPolicy": "http-only",
-      "OriginReadTimeout": 60, "OriginKeepaliveTimeout": 5,
-      "OriginSslProtocols": {"Quantity": 1, "Items": ["TLSv1.2"]}
-    }
-  }]},
-  "DefaultCacheBehavior": {
-    "TargetOriginId": "ec2",
-    "ViewerProtocolPolicy": "redirect-to-https",
-    "AllowedMethods": {"Quantity": 7, "Items": ["GET","HEAD","OPTIONS","PUT","POST","PATCH","DELETE"],
-                       "CachedMethods": {"Quantity": 2, "Items": ["GET","HEAD"]}},
-    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
-    "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
-    "Compress": false
-  }
-}
-EOF
-  # CachingDisabled + AllViewer (managed policies): nothing cached; WebSocket
-  # upgrade headers and ?token= pass through. One fast connection attempt so a
-  # sleeping backend fails in ~5 s and the site offers to wake it.
-  DIST=$(awsq cloudfront create-distribution --distribution-config "file://$WORK/dist.json" --query Distribution.Id)
-  save DISTRIBUTION_ID "$DIST"
-fi
-CF_DOMAIN=$(awsq cloudfront get-distribution --id "$DIST" --query Distribution.DomainName)
-echo "$CF_DOMAIN"
+echo "$INSTANCE"
+BACKEND_URL="https://$PUBLIC_HOST"
 
 # ---------------------------------------------------------------- wake
 step "Wake function"
@@ -214,12 +182,12 @@ echo "$WAKE_URL"
 cat <<EOF
 
 Done. First boot installs everything (~10 min); then the backend answers at
-https://$CF_DOMAIN/health  (CloudFront itself takes ~5 min to deploy).
+$BACKEND_URL/health
 
 Set these in Vercel -> Project Settings -> Environment Variables, then redeploy:
-  VITE_BACKEND_URL=https://$CF_DOMAIN
+  VITE_BACKEND_URL=$BACKEND_URL
   VITE_BACKEND_TOKEN=$AUTH_TOKEN
   VITE_WAKE_URL=${WAKE_URL%/}
 
-Watch first boot:  ssh -i "$KEY_FILE" ubuntu@$ORIGIN 'tail -f /var/log/gg-bootstrap.log'
+Watch first boot:  ssh -i "$KEY_FILE" ubuntu@$PUBLIC_IP 'tail -f /var/log/gg-bootstrap.log'
 EOF

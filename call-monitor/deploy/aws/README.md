@@ -3,20 +3,28 @@
 The backend is a stateful FastAPI service (WebSockets, ~1.3 GB model held in
 memory, one inference worker), so it runs on one EC2 machine, not Lambda or
 SageMaker. Because it's used rarely, the machine **powers itself off after
-15 idle minutes** and the website **wakes it on demand**:
+15 idle minutes** and is started again on demand:
 
 ```
-browser ──https/wss──> CloudFront ──:8000──> EC2 (stopped when idle)
-   │                                            ▲
-   └──POST──> Lambda function URL ──StartInstances┘
+browser ──https/wss──> Caddy :443 ──> uvicorn 127.0.0.1:8000     (EC2, stopped when idle)
+   │        <ip>.sslip.io, Let's Encrypt                 ▲
+   └──POST──> Lambda function URL ──StartInstances───────┘   (optional, see below)
 ```
 
-1. Someone presses *Live check* (or uploads a file) on the site.
-2. The site can't reach `/health`, so it POSTs to the wake function and shows
-   "Waking it up…". Boot plus model load takes ~1.5–2 minutes.
-3. The check starts on its own once `/health` answers.
-4. 15 minutes after the last stream or upload ends, `gg-idle-stop` powers the
-   machine off. Open dashboards (`/ws/monitor`, `/health`) don't count as use.
+- **HTTPS without a domain:** `15-207-160-92.sslip.io` resolves to the Elastic
+  IP, and Caddy gets a Let's Encrypt certificate for it and renews it on its
+  own. WebSockets and the streamed `/analyse` response pass straight through.
+  (CloudFront was the first plan; new AWS accounts can't create distributions
+  until AWS Support verifies them.)
+- **Idle stop:** `gg-idle-stop.timer` checks `/activity` every minute and powers
+  off after 15 minutes without a live stream or upload. Open dashboards
+  (`/ws/monitor`, `/health`) don't count as use.
+
+## Wake-up time (measured, Oct 2026)
+
+From `start-instances` to the backend answering over HTTPS: **37 s**. The machine
+boots in ~10 s, Caddy is up at ~14 s, and the model loads in ~18 s from a cold
+disk (~5 s when cached). Once awake, each 4 s window is scored in **~0.7 s**.
 
 ## Deploy
 
@@ -29,41 +37,57 @@ AWS_PROFILE=gg ./deploy.sh          # Git Bash on Windows
 It needs the Indic head at `backend/models/xlsr-mamba/conformer_head_only.safetensors`
 locally (uploaded to a private S3 bucket; the instance fetches it through a
 7-day presigned link), and deploys the **committed** code (`git archive HEAD`).
-It prints three values for Vercel → Project Settings → Environment Variables:
-`VITE_BACKEND_URL`, `VITE_BACKEND_TOKEN`, `VITE_WAKE_URL`. Redeploy the site
-after setting them (Vite bakes them in at build time).
+First boot installs everything in ~5 minutes.
+
+Then set in Vercel → Project Settings → Environment Variables, and redeploy
+(Vite bakes them in at build time):
+
+| Variable | Value |
+|---|---|
+| `VITE_BACKEND_URL` | `https://<ip-with-dashes>.sslip.io` (printed by deploy.sh) |
+| `VITE_BACKEND_TOKEN` | `AUTH_TOKEN` from `.state.env` (gitignored) |
+| `VITE_WAKE_URL` | the Lambda function URL, once the wake function exists |
 
 Knobs: `INSTANCE_TYPE` (default `c7i.xlarge`), `IDLE_MINUTES` (default 15),
-`AWS_REGION` (default `ap-south-1`).
+`AWS_REGION` (default `ap-south-1`). `AWS_PROFILE=gg ./teardown.sh` deletes everything.
 
-`AWS_PROFILE=gg ./teardown.sh` deletes everything.
+## Waking it
 
-## Cost at ~1 check per day
+**Automatic (website button):** needs the wake Lambda, and creating a Lambda
+needs an IAM role. If your IAM user can't create roles (`iam:CreateRole`), the
+account owner must either grant `iam:CreateRole`, `iam:PutRolePolicy`,
+`iam:AttachRolePolicy` and `iam:PassRole` on `role/gg-backend-wake`, or create
+that role themselves (trusted by `lambda.amazonaws.com`, with
+`AWSLambdaBasicExecutionRole` plus `ec2:StartInstances` on the instance and
+`ec2:DescribeInstances`). Then re-run `deploy.sh`, which picks up from there.
 
-Each check keeps the machine up ~22 minutes (2 boot + ~5 use + 15 idle), about
-11 hours a month. US list prices; Mumbai is within a few percent.
+**Manual (until then):** start it ~1 minute before use:
 
-| Item | Basis | Per month |
+```bash
+aws ec2 start-instances --profile gg --region ap-south-1 --instance-ids <INSTANCE_ID from .state.env>
+```
+
+## Cost at ~1 check per day (Mumbai prices, AWS Price List API)
+
+Each check keeps the machine up ~17 minutes (≤1 boot + use + 15 idle), about
+9 hours a month.
+
+| Item | Price | Per month |
 |---|---|---|
-| EC2 `c7i.xlarge` | ~$0.18/h × ~11 h | ~$2.00 |
-| EBS 20 GB gp3 | billed even while stopped, ~$0.08–0.09/GB | ~$1.70 |
-| Elastic IP | $0.005/h, billed all month | ~$3.65 |
-| CloudFront | well inside the always-free 1 TB / 10 M requests | $0 |
-| Lambda wake | inside the free tier | $0 |
-| S3 | a few MB | <$0.01 |
-| **Total** | | **~$7–8 (~₹600–700)** |
+| EC2 `c7i.xlarge` | $0.1785/h × ~9 h | ~$1.60 |
+| EBS 20 GB gp3 (billed while stopped too) | $0.0912/GB-month | $1.82 |
+| Public IPv4 / Elastic IP (billed all month) | $0.005/h | $3.65 |
+| Lambda, S3 | free tier / a few MB | ~$0 |
+| **Total** | | **~$7 (~₹600)** |
 
-The same machine left on 24/7 is ~$135/month. Each extra check-day adds ~7¢.
-The Elastic IP is the largest line; it buys a fixed address that CloudFront
-can point at across stop/start.
+Left running 24/7 it would be ~$136/month.
 
 ## Debugging
 
 ```bash
-ssh -i ~/.ssh/gg-backend.pem ubuntu@<public DNS printed by deploy.sh>
-sudo tail -f /var/log/gg-bootstrap.log        # first boot (~10 min)
-journalctl -u gg-backend -f                   # the backend
-journalctl -t gg-idle-stop                    # why/when it powered off
+ssh -i ~/.ssh/gg-backend.pem ubuntu@<elastic ip>    # only from the IP that ran deploy.sh
+sudo tail -f /var/log/gg-bootstrap.log    # first boot
+journalctl -u gg-backend -f               # the backend
+journalctl -u caddy -f                    # https / certificate
+journalctl -t gg-idle-stop                # when and why it powered off
 ```
-
-SSH is allowed only from the IP that ran `deploy.sh`.
