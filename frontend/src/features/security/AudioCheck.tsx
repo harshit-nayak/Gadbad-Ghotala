@@ -17,10 +17,11 @@ import {
   type AudioSegment,
   type AudioWindowResult,
 } from '../../services/audioCheckService';
+import { LiveMicCheck } from './LiveMicCheck';
 import './audioCheck.css';
 
 type Phase = 'idle' | 'decoding' | 'analysing' | 'done' | 'error';
-type InputMode = 'choose' | 'upload' | 'mic';
+type InputMode = 'choose' | 'live' | 'upload' | 'mic';
 
 const labelCopy: Record<string, { text: string; level: RiskLevel }> = {
   likely_real: { text: 'Sounds real', level: 'low' },
@@ -142,7 +143,11 @@ function MicRecorder({ onRecorded }: { onRecorded: (file: File) => void }) {
   const requestAndStart = async () => {
     setPermState('requesting');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Raw signal: the browser's call processing (denoise, gain riding) adds
+      // exactly the artefacts a spoof detector reacts to.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
+      });
       streamRef.current = stream;
       setPermState('granted');
       startRecording(stream);
@@ -375,14 +380,31 @@ export function AudioCheck() {
       <PageHeader
         title="Voice & Audio check"
         eyebrow="AI Voice Forensics"
-        description="Detect AI-generated and cloned voices — record live from your microphone or upload an audio file."
+        description="Detect AI-generated and cloned voices — check the microphone live, record a clip, or upload an audio file."
       />
 
-      {!file ? (
+      {!file && mode === 'live' ? (
+        <LiveMicCheck onBack={() => setMode('choose')} />
+      ) : !file ? (
         <Panel>
           {/* Mode chooser */}
           {mode === 'choose' && (
             <div className="audio-mode-chooser">
+              <button
+                id="audio-mode-live"
+                type="button"
+                className="audio-mode-btn"
+                onClick={() => setMode('live')}
+              >
+                <span className="audio-mode-btn__icon">
+                  <Icon name="activity" size={24} />
+                </span>
+                <span className="audio-mode-btn__label">Live check</span>
+                <span className="audio-mode-btn__sub">Scores the mic as you speak</span>
+              </button>
+
+              <div className="audio-mode-divider"><span>or</span></div>
+
               <button
                 id="audio-mode-mic"
                 type="button"
@@ -392,8 +414,8 @@ export function AudioCheck() {
                 <span className="audio-mode-btn__icon">
                   <Icon name="voice" size={24} />
                 </span>
-                <span className="audio-mode-btn__label">Record with mic</span>
-                <span className="audio-mode-btn__sub">Use browser microphone</span>
+                <span className="audio-mode-btn__label">Record, then check</span>
+                <span className="audio-mode-btn__sub">Record a clip with the mic</span>
               </button>
 
               <div className="audio-mode-divider"><span>or</span></div>
