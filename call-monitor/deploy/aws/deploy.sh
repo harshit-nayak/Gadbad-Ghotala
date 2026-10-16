@@ -13,6 +13,8 @@
 #
 # Prints the Vercel environment variables at the end. teardown.sh deletes it all.
 set -euo pipefail
+# Git Bash would rewrite '/aws/service/...' args into Windows paths for aws.exe.
+export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")"
 
 REGION=${AWS_REGION:-ap-south-1}

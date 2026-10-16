@@ -6,6 +6,8 @@
 # CloudFront must be disabled and fully redeployed before it can be deleted,
 # which takes several minutes; the script waits for it.
 set -uo pipefail
+# Git Bash would rewrite '/aws/service/...' args into Windows paths for aws.exe.
+export MSYS_NO_PATHCONV=1
 cd "$(dirname "$0")"
 REGION=${AWS_REGION:-ap-south-1}
 NAME=gg-backend
