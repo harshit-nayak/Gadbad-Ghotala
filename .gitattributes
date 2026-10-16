@@ -1,0 +1,2 @@
+# Shell scripts run under bash (incl. on EC2): CRLF breaks them.
+*.sh text eol=lf
