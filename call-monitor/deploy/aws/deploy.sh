@@ -149,7 +149,8 @@ aws iam put-role-policy --role-name $ROLE --policy-name start-backend --policy-d
     {\"Effect\": \"Allow\", \"Action\": \"ec2:StartInstances\",
      \"Resource\": \"arn:aws:ec2:$REGION:$ACCOUNT:instance/$INSTANCE\"},
     {\"Effect\": \"Allow\", \"Action\": \"ec2:DescribeInstances\", \"Resource\": \"*\"}
-  ]}"
+  ]}" 2>/dev/null \
+  || echo "   (can't edit the role's policy -- using the role as the account owner set it up)"
 ROLE_ARN=$(awsq iam get-role --role-name $ROLE --query Role.Arn)
 python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1],'w'); z.write('wake_lambda.py'); z.close()" "$WORK/wake.zip"
 ENV="Variables={INSTANCE_ID=$INSTANCE,WAKE_TOKEN=$AUTH_TOKEN}"
