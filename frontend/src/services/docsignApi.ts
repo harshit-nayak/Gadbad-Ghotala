@@ -1,5 +1,21 @@
-/** Thin client for the docsign pipeline's HTTP API (see SIH/docPipeline/doc/src/docsign/web.py).
- * Requests go through the Vite dev proxy (/api, /root_ca.pem -> 127.0.0.1:8765). */
+/** Thin client for the docsign pipeline's HTTP API (see docPipeline/src/docsign/web.py).
+ *
+ * Locally, requests go through the Vite dev proxy (/api, /root_ca.pem -> 127.0.0.1:8765).
+ * On an HTTPS deployment they go to the hosted server (call-monitor/deploy/aws),
+ * which serves the docsign API beside the voice backend: same host, same bearer
+ * token, and the same sleep-when-idle machine, so each call wakes it first. */
+import { BACKEND_HTTP, BACKEND_TOKEN } from '../app/backend';
+import { ensureBackendAwake } from './backendWake';
+
+/** '' = same origin (the dev proxy); otherwise the hosted server. */
+const DOCSIGN_BASE: string = (import.meta.env.VITE_DOCSIGN_URL as string | undefined)?.replace(/\/$/, '')
+  ?? (window.location.protocol === 'https:' && BACKEND_HTTP ? BACKEND_HTTP : '');
+
+const authHeaders = (): Record<string, string> =>
+  DOCSIGN_BASE && BACKEND_TOKEN ? { Authorization: `Bearer ${BACKEND_TOKEN}` } : {};
+
+/** The hosted machine sleeps when unused; locally there's nothing to wake. */
+const wake = () => (DOCSIGN_BASE ? ensureBackendAwake(() => {}) : Promise.resolve());
 
 export type VerifyStatus =
   | 'VALID'
@@ -119,7 +135,8 @@ async function asJson<T>(res: Response): Promise<T> {
 async function getJson<T>(path: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path);
+    await wake();
+    res = await fetch(DOCSIGN_BASE + path, { headers: authHeaders() });
   } catch {
     throw new DocsignApiError('Cannot reach the docsign service. Is it running?', 0);
   }
@@ -129,9 +146,10 @@ async function getJson<T>(path: string): Promise<T> {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, {
+    await wake();
+    res = await fetch(DOCSIGN_BASE + path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body),
     });
   } catch {
@@ -143,7 +161,8 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 async function postForm<T>(path: string, form: FormData): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, { method: 'POST', body: form });
+    await wake();
+    res = await fetch(DOCSIGN_BASE + path, { method: 'POST', body: form, headers: authHeaders() });
   } catch {
     throw new DocsignApiError('Cannot reach the docsign service. Is it running?', 0);
   }
@@ -180,5 +199,5 @@ export const docsignApi = {
     return postForm<VerifyResult>('/api/verify/offline', form);
   },
 
-  rootCaUrl: '/root_ca.pem',
+  rootCaUrl: `${DOCSIGN_BASE}/root_ca.pem`,
 };

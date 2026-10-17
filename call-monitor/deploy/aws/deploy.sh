@@ -9,6 +9,7 @@
 #                    bootstrap.sh; powers itself off after $IDLE_MINUTES idle
 #   Elastic IP       so the address survives stop/start
 #   Caddy (on EC2)   https:// + wss:// at <ip>.sslip.io, Let's Encrypt cert
+#   docPipeline      document signing API on the same machine (/api/*)
 #   Lambda + URL     wake_lambda.py: the website calls it to start the machine
 #
 # Prints the Vercel environment variables at the end. teardown.sh deletes it all.
@@ -48,7 +49,8 @@ if ! aws s3api head-bucket --bucket "$BUCKET" --region "$REGION" >/dev/null 2>&1
     --create-bucket-configuration LocationConstraint="$REGION" >/dev/null
 fi
 # Committed code only, LF line endings, so the server runs what's in git.
-git -C "$REPO" -c core.autocrlf=false archive --format=tar.gz -o "$WORK/code.tgz" HEAD call-monitor/backend
+git -C "$REPO" -c core.autocrlf=false archive --format=tar.gz -o "$WORK/code.tgz" HEAD \
+  call-monitor/backend call-monitor/deploy docPipeline
 aws s3 cp "$WORK/code.tgz" "s3://$BUCKET/code.tgz" --region "$REGION" --only-show-errors
 aws s3 cp "$HEAD_FILE" "s3://$BUCKET/conformer_head_only.safetensors" --region "$REGION" --only-show-errors
 # Links only need to live until first boot finishes; 7 days is the maximum.
