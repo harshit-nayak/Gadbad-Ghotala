@@ -15,12 +15,21 @@ export const WAKE_URL: string | null = import.meta.env.VITE_WAKE_URL
 
 /** Measured on EC2: ~37 s from start to answering over HTTPS. Allow for a slow day. */
 const WAKE_TIMEOUT_MS = 5 * 60_000;
-const POLL_MS = 5_000;
+const POLL_MS = 2_000;
+/**
+ * A stopped machine never answers at all, so this is how long "asleep" takes
+ * to notice. An awake backend answers /health in well under a second; a slow
+ * network that trips this only costs a harmless extra wake request.
+ */
+const HEALTH_TIMEOUT_MS = 3_000;
+/** Don't re-send the page-open wake more often than this. */
+const PREWAKE_EVERY_MS = 5 * 60_000;
+let lastPrewake = 0;
 
 async function isAwake(): Promise<boolean> {
   if (!BACKEND_HTTP) return false;
   try {
-    const response = await fetch(`${BACKEND_HTTP}/health`, { cache: 'no-store', signal: AbortSignal.timeout(8_000) });
+    const response = await fetch(`${BACKEND_HTTP}/health`, { cache: 'no-store', signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) });
     return response.ok;
   } catch {
     return false;
@@ -35,6 +44,18 @@ async function requestWake(): Promise<void> {
   } catch {
     // Retried on the next poll.
   }
+}
+
+/**
+ * Starts waking the backend in the background as soon as someone opens a page
+ * that will need it, so the ~40 s boot overlaps with them setting up the call
+ * instead of starting when they press the button. Fire-and-forget: starting a
+ * running machine is a no-op, and an unused wake just idles back off (~5 cents).
+ */
+export function prewakeBackend(): void {
+  if (!BACKEND_HTTP || !WAKE_URL || Date.now() - lastPrewake < PREWAKE_EVERY_MS) return;
+  lastPrewake = Date.now();
+  void requestWake();
 }
 
 /**

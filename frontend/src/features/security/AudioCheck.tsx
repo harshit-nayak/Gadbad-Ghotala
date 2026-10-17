@@ -17,7 +17,7 @@ import {
   type AudioSegment,
   type AudioWindowResult,
 } from '../../services/audioCheckService';
-import { ensureBackendAwake } from '../../services/backendWake';
+import { ensureBackendAwake, prewakeBackend } from '../../services/backendWake';
 import { LiveMicCheck } from './LiveMicCheck';
 import './audioCheck.css';
 
@@ -284,6 +284,8 @@ export function AudioCheck() {
   const navigate = useNavigate();
 
   useEffect(() => () => abortRef.current?.abort(), []);
+  // Boot a sleeping backend while the person sets up, not after they press start.
+  useEffect(() => prewakeBackend(), []);
   useEffect(() => () => {
     if (audioUrl) URL.revokeObjectURL(audioUrl);
   }, [audioUrl]);

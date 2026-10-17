@@ -201,7 +201,7 @@ export function Landing() {
       {/* ── Clean, Minimal Footer ── */}
       <footer className="compact-footer">
         <div className="compact-footer__inner">
-          <span>{PRODUCT_NAME} · Smart India Hackathon 2026 (SIH26104)</span>
+          <span>{PRODUCT_NAME} · Smart India Hackathon 2026 (SIH PS202)</span>
           <div className="compact-footer__links">
             <Link to="/employee">Employee Call App</Link>
             <Link to="/security">Security Ops</Link>

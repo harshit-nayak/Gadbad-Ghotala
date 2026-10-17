@@ -97,7 +97,7 @@ export function SignIn() {
         <Link to="/" style={{ color: 'var(--forest, #30483a)', fontSize: 'var(--text-xs)', fontWeight: 600, textDecoration: 'none' }}>
           ← Back to About
         </Link>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-subtle, #7a8272)' }}>SIH26104</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-subtle, #7a8272)' }}>SIH PS202</span>
       </div>
     </AuthScreen>
   );
