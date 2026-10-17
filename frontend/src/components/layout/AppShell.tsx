@@ -9,6 +9,7 @@ import { PRODUCT_NAME } from '../../app/brand';
 import { usePresenterMode } from '../../hooks/usePresenterMode';
 import { useToast } from '../ui/Toast';
 import { useAuth } from '../../state/AuthProvider';
+import { prewakeBackend } from '../../services/backendWake';
 import '../../features/auth/auth.css';
 
 export function AppShell() {
@@ -25,6 +26,10 @@ export function AppShell() {
   useEffect(() => {
     document.documentElement.dataset.theme = area.theme;
   }, [area.theme]);
+
+  // Signed in (or returning with a session): start booting the detector now,
+  // so it's ready by the time they reach a check.
+  useEffect(() => prewakeBackend(), []);
 
   // Start each screen at the top, as a real app navigation would.
   useEffect(() => {

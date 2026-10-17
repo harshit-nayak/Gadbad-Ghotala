@@ -36,26 +36,30 @@ async function isAwake(): Promise<boolean> {
   }
 }
 
-async function requestWake(): Promise<void> {
+async function requestWake(keepalive = false): Promise<void> {
   if (!WAKE_URL) return;
   const url = BACKEND_TOKEN ? `${WAKE_URL}?token=${encodeURIComponent(BACKEND_TOKEN)}` : WAKE_URL;
   try {
-    await fetch(url, { method: 'POST', signal: AbortSignal.timeout(15_000) });
+    // keepalive: the request still completes if the page navigates away
+    // straight after, as it does when sign-in redirects to Google/GitHub.
+    await fetch(url, { method: 'POST', keepalive, signal: AbortSignal.timeout(15_000) });
   } catch {
     // Retried on the next poll.
   }
 }
 
 /**
- * Starts waking the backend in the background as soon as someone opens a page
- * that will need it, so the ~40 s boot overlaps with them setting up the call
- * instead of starting when they press the button. Fire-and-forget: starting a
- * running machine is a no-op, and an unused wake just idles back off (~5 cents).
+ * Starts waking the backend in the background as soon as someone signs in or
+ * opens the app, so the ~40 s boot overlaps with them signing in and finding
+ * the Audio page instead of starting when they press the button.
+ * Fire-and-forget: starting a running machine is a no-op, and an unused wake
+ * just idles back off (~5 cents). Deliberately not called from the public
+ * landing page, so crawlers and passers-by never start the paid server.
  */
 export function prewakeBackend(): void {
   if (!BACKEND_HTTP || !WAKE_URL || Date.now() - lastPrewake < PREWAKE_EVERY_MS) return;
   lastPrewake = Date.now();
-  void requestWake();
+  void requestWake(true);
 }
 
 /**

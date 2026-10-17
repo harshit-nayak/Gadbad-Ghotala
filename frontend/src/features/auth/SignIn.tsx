@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PRODUCT_NAME } from '../../app/brand';
 import { Logo } from '../../components/ui/Logo';
+import { prewakeBackend } from '../../services/backendWake';
 import { useAuth } from '../../state/AuthProvider';
 import './auth.css';
 
@@ -32,6 +33,8 @@ export function SignIn() {
 
   const startOAuth = async (provider: 'google' | 'github') => {
     setActiveProvider(provider);
+    // Boot the sleeping detector while the person is away signing in.
+    prewakeBackend();
     if (provider === 'google') {
       await signInWithGoogle();
     } else {
